@@ -127,13 +127,13 @@ function removeReplyThread(body) {
          cleanBody = cleanBody.split('> On ').slice(0, 1).join('')
      }
      
-     //Remove reply threads that are not indented but have a "from, sent, to, subject" header attached
+     //Remove reply threads that are not indented but have a "from, sent, to" header attached
      splitText = cleanBody.split('\n')
-     for (let i = 0; i < splitText.length -4; i++) {
+     for (let i = 0; i < splitText.length -3; i++) {
          if (splitText[i].indexOf('From: ') == 0 &&
              splitText[i + 1].indexOf('Sent: ') == 0 &&
-             splitText[i + 2].indexOf('To: ') == 0 &&
-             splitText[i + 3].indexOf('Subject: ') == 0) {
+             splitText[i + 2].indexOf('To: ') == 0) {
+             console.log('reply removed')
              splitText = splitText.slice(0, i)
              cleanBody = splitText.join('\n')
              break
@@ -165,7 +165,15 @@ function removeForwardThread(body) {
 }
 
 function removeDisclaimer(body) {
-    //check a parsed email to see if it has a legal disclaimer at the bottom, if so, remove it 
+    //check a parsed email to see if it has a legal disclaimer at the bottom, if so, remove it
+    //can check for common language found in those disclaimers and then just remove it 
+        //and if it seems sketchy, we can attach a message that says "Legal Disclaimer taken out" 
+}
+
+function checkForMarketing(body) {
+    //check a parsed email to see if it's probably just a marketing email based on having a bunch of random shit in it
+    //can check for a bunch of weird characters
+    //doesn't have to be perfect, just get a good "guess" so that OpenAI isn't wasting money
 }
 
 async function parseEmail(body, header) {
@@ -174,6 +182,10 @@ async function parseEmail(body, header) {
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)
+    if (cleanBody.slice(0, 1000).indexOf('\n') == -1) {
+        console.log('This email could not be read. It contains an attachment or image.')
+        return
+    }
     
     console.log(cleanBody)
     return cleanBody
