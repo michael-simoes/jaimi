@@ -101,32 +101,27 @@ function cleanString(body) {
     return body
 }
 
-    //THIS CLEANS UP GMAIL!
+//Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
+//There are several cases added to account for when Content-Transfer has additional characters attached
+function removeExtraData(body) {
+    let splitArray = ''
+    splitText = body.split(' ')
+    const contentTransferEncodings = ['Content-Transfer-Encoding:', 'Content-Transfer-Encoding: ', 
+        ' Content-Transfer-Encoding:', '\nContent-Transfer-Encoding:', 'Content-Transfer-Encoding:\n'] 
+
+    for (let i = 0; i < contentTransferEncodings.length; i++) {
+        if (splitText.indexOf(contentTransferEncodings[i]) != -1) {
+            splitArray = splitText.indexOf(contentTransferEncodings[i])
+            body = splitText.slice(splitArray + 1).join(' ').slice(17) 
+        }
+    }
+    return body
+}
 
 async function parseEmail(body, header) {
     plainBody = await convertHtml(body)
     cleanBody = await cleanString(plainBody)
-
-    //Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
-    //There are several cases added to account for when Content-Transfer has additional characters attached
-    splitText = cleanBody.split(' ')
-    let splitArray = splitText.indexOf('Content-Transfer-Encoding:', 5)
-    if (splitArray != -1) {
-        cleanBody = splitText.slice(splitArray + 1).join(' ').slice(17)
-    }
-    else if(splitText.indexOf('Content-Transfer-Encoding: ', 5) != -1) {
-        cleanBody = splitText.slice(splitArray + 1).join(' ').slice(17)
-    } 
-    else if(splitText.indexOf(' Content-Transfer-Encoding:', 5) != -1) {
-        cleanBody = splitText.slice(splitArray + 1).join(' ').slice(17)
-    }
-    else if(splitText.indexOf('\nContent-Transfer-Encoding:', 5) != -1) {
-        cleanBody = splitText.slice(splitArray + 1).join(' ').slice(17)
-    }
-    else if(splitText.indexOf('Content-Transfer-Encoding:\n', 5) != -1) {
-        cleanBody = splitText.slice(splitArray + 1).join(' ').slice(17) 
-    }
-    else {cleanBody = splitText.join(' ')}
+    cleanBody = removeExtraData(cleanBody)
 
     //Remove reply threads that are indented
     splitArray = cleanBody.indexOf('> On ')
