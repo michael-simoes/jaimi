@@ -1,12 +1,26 @@
 console.log('app.js has run')
 
-const { type } = require('os');
-const { exit } = require('process');
-const inspect = require('util').inspect;
-const mailParser = require('mailparser').MailParser        
-const simpleParser = require('mailparser').simpleParser 
-const { callbackPromise } = require('nodemailer/lib/shared/index.js');
-const { once } = require('events');
-const readNewestEmail = require('./readMail.js')
+const { readNewestEmail, readLastSent, inReplyTo } = require('./readMail.js')
+const account = require('./account.js')
+const prompts = require('./prompts.js')
 
-readNewestEmail('outlook')
+
+
+// readNewestEmail(account.mailbox)
+
+//STOP TRYING TO MAKE IT CLEAN. SHIT WON'T WORK. JUST TREAT READNEWESTEMAILs as START POINT FOR ALL OTHER WORK!
+
+// readLastSent()
+inReplyTo()
+
+//Fetch email we are replying to based on sender and subject line
+
+
+    
+//Load email into generate.js
+////Load it into prompts.js
+
+
+
+//Take generated reply from OpenAi
+//Send over SMTP

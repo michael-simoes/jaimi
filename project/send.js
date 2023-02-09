@@ -5,9 +5,9 @@ const account = require('./account.js')
 
 
 
-const smtpConfig = {
+const smtpConfig = {                      
     // sendmail: true,
-    host: 'smtp-mail.outlook.com',
+    host: account.smtp,
     port: 587,
     // secure: true,
     // tls: 'outlook.com', 
@@ -23,9 +23,10 @@ const smtpConfig = {
   
   const transporter = nodemailer.createTransport(smtpConfig);
   
-  transporter.sendMail({
-    from: 'michael_simoes@outlook.com',
+  transporter.sendMail({                           ///THIS NEEDS 'REPLY-TO'! 
+    from: account.user,
     to: 'central.michael88@gmail.com',
-    subject: 'hello',
-    text: 'jaimi\'s ancestor wrote this.'
+    subject: 'RE: Hey',
+    text: 'jaimi\'s ancestor NAD ITS GETTING LONGER.',
+    inReplyTo: 'PH7PR06MB8995EB00C23761A716742C01EAD89@PH7PR06MB8995.namprd06.prod.outlook.com',
   })
