@@ -59,16 +59,17 @@ function readNewestEmail(emailClient) {
     })
 }
 
+///Get the original email we are replying to (for follow-ups)
 function inReplyTo(emailClient, replyToId) { 
     imap.on('ready', () => {
         openTheInbox((err, box) => {
             if (err) {throw new Error('Something has gone wrong with the openInbox function: ', err)}
-            imap.search([['HEADER', 'SUBJECT', 'Hey'], ['FROM', 'central.michael88@gmail.com']], (err, result) => {
+            imap.search([['HEADER', 'MESSAGE-ID', 'CAGfLKzRjy5c=Vz+UEP=aO0k=EoS7vod4u3QpsnqHsthVMYS7pw@mail.gmail.com']], (err, result) => {
                 console.log('result: ', result)
                 const latestMessage = imap.fetch(result, 
                 { 
                     bodies: 
-                    ['HEADER.FIELDS (FROM SUBJECT MESSAGE-ID)', 'TEXT'],  
+                    ['HEADER.FIELDS (FROM SUBJECT)', 'TEXT'],  
                 })              
             latestMessage.on('message', (msg) => {   
                 let count = 0
@@ -105,34 +106,54 @@ function inReplyTo(emailClient, replyToId) {
     })})
 }
 
-function openSentFolder(cb) {
-    imap.openBox('SENT', true, cb);
+function openSentFolder(emailClient, cb) {
+    if (emailClient == 'gmail') {
+        imap.openBox('[Gmail]/Sent Mail', true, cb);
+    }
+    else {imap.openBox('SENT', true, cb);}
 }
 
 
-function readLastSent() {                           
+function readLastSent(emailClient) {                           
     imap.on('ready', () => {
-        openSentFolder((err, box) => {
-            if (err) {throw new Error('Something has gone wrong with the openSentFolder function: ', err)}
-            const latestMessage = imap.seq.fetch(box.messages.total + ':*', 
+        openSentFolder(emailClient, (err, box) => {
+            // if (err) {throw new Error('Something has gone wrong with the openSentFolder function: ', err)}
+            const latestMessage = imap.seq.fetch(box.messages.total + ':*',
                 { 
                     bodies: 
-                    ['HEADER.FIELDS (TO SUBJECT MESSAGE-ID IN-REPLY-TO)'],             //PH7PR06MB8995050BF19FD36F01ECB6C6EAD89@PH7PR06MB8995.namprd06.prod.outlook.com
-                })                                                                      //PH7PR06MB89950005A9D6466E056EDC34EAD99@PH7PR06MB8995.namprd06.prod.outlook.com
-            latestMessage.on('message', (msg) => {   
-                let headers = ''
+                    ['HEADER.FIELDS (TO SUBJECT MESSAGE-ID IN-REPLY-TO)', 'TEXT']           
+                })                                                             
+            latestMessage.on('message', (msg) => {
+                let count = 0
+                let body = ''
+                let header = ''   
                 msg.on('body', (stream) => {
+                    count++
                     stream.on('data', (chunk) => {          
-                            headers += chunk
+                        if (emailClient == 'gmail') {                   //this should be refactored because it's not good to encode as utf-8
+                            if (count == 1) {                                           ///on each individual chunk. should be done at end
+                                body += chunk                 
+                            }
+                            else {
+                                header += chunk                  
+                            }               
+                        }                                                              
+                        else {
+                            if (count == 1) { 
+                                header += chunk                  
+                            }
+                            else {
+                                body += chunk                  
+                            }               
+                        }   
                     }) 
                 })
                 msg.once('end', () => {
-                    headers = headers.toString('utf8')
+                    header = header.toString('utf8')
+                    body = body.toString('utf8')
                     latestMessage.once('end', () => {
                         imap.end()
-
-                        // console.log(messageId, subject)
-                        parseEmail('', headers)
+                        parseEmail(body, header)
                         
                     })
                 })    

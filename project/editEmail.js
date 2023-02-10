@@ -90,7 +90,6 @@ function removeReplyThread(body) {
          if (splitText[i].indexOf('From: ') == 0 &&
              splitText[i + 1].indexOf('Sent: ') == 0 &&
              splitText[i + 2].indexOf('To: ') == 0) {
-             console.log('reply removed')
              splitText = splitText.slice(0, i)
              cleanBody = splitText.join('\n')
              break
@@ -133,7 +132,25 @@ function checkForMarketing(body) {
     //doesn't have to be perfect, just get a good "guess" so that OpenAI isn't wasting money
 }
 
+//Order of header elements is different for Google and Outlook
+async function getHeaderElements(header) {
+    let splitHead = header.split('\r\n')
+    let to = splitHead[0].replaceAll(/(.*)</g, '')
+    to = to.replaceAll('>', '')
+    
+    let subject = splitHead[1].replace('Subject: ', '')
+    let messageId = splitHead[3].replace('\t<', '').replace('>', '')
+    let replyToId = splitHead[5].replace('\t<', '').replace('>', '')
+    console.log(splitHead)
+    console.log('subject:', subject)
+    console.log('to:', to)
+    console.log('messageId:', messageId)
+    console.log('in-reply-to:', replyToId)
+    return true
+}
+
 async function parseEmail(body, header) {
+    header = await getHeaderElements(header)
     plainBody = await convertHtml(body)
     cleanBody = await cleanString(plainBody)
     cleanBody = await removeExtraData(cleanBody)

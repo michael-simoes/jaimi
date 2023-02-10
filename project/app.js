@@ -10,9 +10,9 @@ const prompts = require('./prompts.js')
 
 //STOP TRYING TO MAKE IT CLEAN. SHIT WON'T WORK. JUST TREAT READNEWESTEMAILs as START POINT FOR ALL OTHER WORK!
 
-// readLastSent()
-inReplyTo()
-
+// readNewestEmail(account.mailbox)
+readLastSent(account.mailbox)
+// inReplyTo()
 //Fetch email we are replying to based on sender and subject line
 
 
