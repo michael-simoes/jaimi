@@ -121,7 +121,7 @@ function readLastSent(emailClient) {
             const latestMessage = imap.seq.fetch(box.messages.total + ':*',
                 { 
                     bodies: 
-                    ['HEADER.FIELDS (TO SUBJECT MESSAGE-ID IN-REPLY-TO)', 'TEXT']           
+                    ['HEADER.FIELDS (TO CC SUBJECT MESSAGE-ID IN-REPLY-TO)', 'TEXT']           
                 })                                                             
             latestMessage.on('message', (msg) => {
                 let count = 0
