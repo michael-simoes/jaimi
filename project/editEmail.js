@@ -136,22 +136,13 @@ function checkForMarketing(body) {
 //Order of header elements is different for Google and Outlook
 //###############This probably gets messed up with CC and BCC#######################
 async function getHeaderElements(header) {
-    //outlook
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
-    let to = ''
-    let cc = ''
-    let subject = ''
-    let messageId = ''
-    let replyToId = ''
-    // let identifyChar = ['T', '']
-    const object = { object: 'value', layer: { another: 'layer' }}
+    let to = '', cc = '', subject = '', messageId = '', replyToId = ''
+    let func = ''
     const identifyChar = { 
-       charOptions: [ 'T', 'C', 'M', 'I', '\t' ],
+       charOptions: [ 'T', 'C', 'S', 'M', 'I'],
        charVariables: [to, cc, subject, messageId, replyToId], 
-       charFormula: {
-        
-       },
        charCleaners: { 
             'T': (param) => { 
                 return param.replaceAll(/(.*)</g, '').replaceAll('>', '') 
@@ -162,72 +153,35 @@ async function getHeaderElements(header) {
             'S': (param) => { 
                 return param.replace('Subject: ', '') 
             },
-            '\t': (param) => { 
-                return param.replace('\t<', '').replace('>', '') 
-            },
+    
             'M': (param) => { 
-                return param.replace('\t<', '').replace('>', '') 
+                return param.replace(/(.*)</g, '').replace('>', '') 
             },
             'I': (param) => { 
-                return param.replace('\t<', '').replace('>', '') 
+                return param.replace(/(.*)</g, '').replace('>', '') 
             },
         } 
     }
 
-    // function HeaderSection(character, method) {
-    //     this.character = character
-    //     this.method = method
-    // }
-
-    // function cleanTo(param) { 
-    //     return param.replaceAll(/(.*)</g, '').replaceAll('>', '') 
-    // }
-
-    // const too = new HeaderSection('t', cleanTo('>hihihi'))
-
-    let func = ''
-    //RUNS OVER, TOO LONG OR SOMETHING
-
-    //If there are more items in the array than there are characters (aka there's the extra tab)
-            ///then run with the char set that includes '<' 
-            //otherwise run with the car set that includes 
-
     for (let i = 0; i < splitHead.length; i++) {
+        //Message-ID and Reply-To-ID get messed up in Outlook. This identifies 
+        //the weird formatting and fixes it
         if (splitHead[i] == 'Message-ID:') {
             splitHead[i] = splitHead[i] + splitHead[i + 1]
             splitHead[i + 2] = splitHead[i + 2] + splitHead[i + 3]
             let forDeletion = [splitHead[i + 1], splitHead[i + 3]]
-            arr = splitHead.filter(item => !forDeletion.includes(item))
-            console.log(arr)
-            // splitHead = splitHead[i, i+1]
-            // console.log(splitHead)
+            splitHead = splitHead.filter(item => !forDeletion.includes(item))
         }
-        // for (let char = 0; char < identifyChar.charOptions.length; char++) {
-        //     if (splitHead[i][0] == identifyChar.charOptions[char]) {
-        //         // func = identifyChar.charCleaners[ identifyChar.charOptions[char] ] //splitHead[i].replaceAll(/(.*)</g, '').replaceAll('>', '')    
-        //         // console.log(identifyChar.charOptions[char])
-        //         // console.log(to('>OK BASED'))
-        //         // identifyChar.charVariables[char] = func(splitHead[i])
-        //     }
-        // }
-        
+        //Detects header element based on first char in array
+        //Selects parsing function based on char and assigns parsed text to new array
+        for (let char = 0; char < identifyChar.charOptions.length; char++) {
+            if (splitHead[i][0] == identifyChar.charOptions[char]) {
+                func = identifyChar.charCleaners[ identifyChar.charOptions[char] ]    
+                identifyChar.charVariables[char] = func(splitHead[i])
+            }
+        }
     }
-    
-    // let to = splitHead[0].replaceAll(/(.*)</g, '').replaceAll('>', '')
-    // let subject = splitHead[1].replace('Subject: ', '')
-    // let messageId = splitHead[3].replace('\t<', '').replace('>', '')
-    // let replyToId = splitHead[5].replace('\t<', '').replace('>', '')
-    // console.log('subject:', subject)
-    console.log('to:', to)
-    console.log('messageId:', messageId)
-    console.log('in-reply-to:', replyToId)
-    console.log('in-reply-to:', replyToId)
-
-    //google now
-    console.log(splitHead)
-    process.exit()
-    return true
-    
+    return identifyChar.charVariables
 }
 
 async function parseEmail(body, header) {
