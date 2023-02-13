@@ -1,6 +1,4 @@
 const { convert } = require('html-to-text');
-const { inReplyTo } = require('./readMail');
-
 
 
 function getSentTime() {
@@ -62,23 +60,27 @@ function cleanString(body) {
 
 //Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
 //There are several cases added to account for when Content-Transfer has additional characters attached
+////NOTE: There may be a far better way to do this using indexOf('charset=', 20) and slicing the body string...
+////see the third to last line of the function
 function removeExtraData(body) {
     let splitArray = ''
     splitText = body.split(' ')
     const contentTransferEncodings = ['Content-Transfer-Encoding:', 'Content-Transfer-Encoding: ', 
-        ' Content-Transfer-Encoding:', '\nContent-Transfer-Encoding:', 'Content-Transfer-Encoding:\n'] 
-
+    ' Content-Transfer-Encoding:', '\nContent-Transfer-Encoding:', 'Content-Transfer-Encoding:\n'] 
+    
     for (let i = 0; i < contentTransferEncodings.length; i++) {
         if (splitText.indexOf(contentTransferEncodings[i]) != -1) {
             splitArray = splitText.indexOf(contentTransferEncodings[i])
             body = splitText.slice(splitArray + 1).join(' ').slice(17) 
         }
     }
+
+    body = body.slice(body.indexOf('charset=', 20) + 8)
     return body
 }
 
 function removeReplyThread(body) {
-     //Remove reply threads that are indented
+    //Remove reply threads that are indented
      let cleanBody = body
      splitArray = cleanBody.indexOf('> On ')
      if (splitArray != -1) {
@@ -107,8 +109,8 @@ function removeReplyThread(body) {
              cleanBody = splitText.join('\n')
              break
          }
-     }
-    return cleanBody
+        }
+        return cleanBody
 }
 
 function removeForwardThread(body) {
@@ -186,8 +188,8 @@ async function getHeaderElements(header) {
 
 async function parseEmail(body, header) {
     header = await getHeaderElements(header)
-    plainBody = await convertHtml(body)
-    cleanBody = await cleanString(plainBody)
+    cleanBody = await convertHtml(body)
+    cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)
@@ -195,7 +197,6 @@ async function parseEmail(body, header) {
         console.log('This email could not be read. It contains an attachment or image.')
         return
     }
-    
     console.log(header, cleanBody)
     return cleanBody
 }
