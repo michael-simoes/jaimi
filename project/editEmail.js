@@ -135,16 +135,15 @@ function checkForMarketing(body) {
     //doesn't have to be perfect, just get a good "guess" so that OpenAI isn't wasting money
 }
 
-//Order of header elements is different for Google and Outlook
-//###############This probably gets messed up with CC and BCC#######################
-async function getHeaderElements(header) {
+//Detec type of header element, then select correct function to parse the content
+async function parseHeader(header) {
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
     let to = '', cc = '', subject = '', messageId = '', replyToId = ''
     let func = ''
-    const identifyChar = { 
+    const headerObject = { 
        charOptions: [ 'T', 'C', 'S', 'M', 'I'],
-       charVariables: [to, cc, subject, messageId, replyToId], 
+       headerElements: [to, cc, subject, messageId, replyToId], 
        charCleaners: { 
             'T': (param) => { 
                 return param.replaceAll(/(.*)</g, '').replaceAll('>', '') 
@@ -176,18 +175,17 @@ async function getHeaderElements(header) {
         }
         //Detects header element based on first char in array
         //Selects parsing function based on char and assigns parsed text to new array
-        for (let char = 0; char < identifyChar.charOptions.length; char++) {
-            if (splitHead[i][0] == identifyChar.charOptions[char]) {
-                func = identifyChar.charCleaners[ identifyChar.charOptions[char] ]    
-                identifyChar.charVariables[char] = func(splitHead[i])
+        for (let char = 0; char < headerObject.charOptions.length; char++) {
+            if (splitHead[i][0] == headerObject.charOptions[char]) {
+                func = headerObject.charCleaners[ headerObject.charOptions[char] ]    
+                headerObject.headerElements[char] = func(splitHead[i])
             }
         }
     }
-    return identifyChar.charVariables
+    return headerObject.headerElements
 }
 
-async function parseEmail(body, header) {
-    header = await getHeaderElements(header)
+async function parseBody(body, header) {
     cleanBody = await convertHtml(body)
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
@@ -197,9 +195,8 @@ async function parseEmail(body, header) {
         console.log('This email could not be read. It contains an attachment or image.')
         return
     }
-    console.log(header, cleanBody)
     return cleanBody
 }
 
 
-module.exports = { parseEmail }
+module.exports = { parseBody, parseHeader }
