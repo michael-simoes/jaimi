@@ -45,7 +45,7 @@ async function readNewestEmail(emailClient) {
                 msg.once('end', () => {
                     parseEmail(body, header)
                     latestMessage.once('end', () => {
-                        imap.end()
+                        // imap.end()
                     })
                 })    
             }) 
@@ -101,15 +101,13 @@ async function readInboxEmail(imap, emailClient, emailId) {
                     body = body.toString('utf8')
                     header = header.toString('utf8')
                     resolve(body, header)
-                    latestMessage.once('end', () => {
-                        imap.end()
-                    })
                 })    
             }) 
             })
     })})
     })
     if (!body || !header) {
+        // imap.end()
         return false
     }
     return { body, header }
@@ -162,9 +160,6 @@ async function readSentEmail(imap, emailClient, emailId) {
                     body = body.toString('utf8')
                     header = header.toString('utf8')
                     resolve(body, header)
-                    latestMessage.once('end', () => {
-                        imap.end()
-                    })
                 })    
             }) 
             })
@@ -222,10 +217,7 @@ async function readLastSent(imap, emailClient) {
                 msg.once('end', () => {
                     header = header.toString('utf8')
                     body = body.toString('utf8')
-                    resolve(body, header)
-                    latestMessage.once('end', () => {
-                        imap.end()
-                    })                
+                    resolve(body, header)             
                 })    
             })
         }) 
@@ -234,7 +226,7 @@ async function readLastSent(imap, emailClient) {
 return {body, header}
 }
 
-async function imapSequence() {
+async function imapInit() {
     let imap = new Imap({
         user: account.user,
         password: account.pass,
@@ -248,12 +240,17 @@ async function imapSequence() {
         console.log(err);
     });
     
-    imap.once('end', () => {
-        console.log('Connection ended');
-    });
-    
+    console.log('Connecting to new mail server')    
     imap.connect();   
+
     return imap
 }
+
+async function imapEnd(imap) {
+    imap.end()
+    imap.on('end', () => {
+        console.log('Connection ended');
+    });
+}
   
-module.exports = { readNewestEmail, readLastSent, readInboxEmail, readSentEmail, imapSequence }
+module.exports = { readNewestEmail, readLastSent, readInboxEmail, readSentEmail, imapInit, imapEnd }
