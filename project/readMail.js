@@ -54,15 +54,18 @@ async function readNewestEmail(emailClient) {
 }
 
 ///Get the original email we are replying to (for follow-ups)
-async function readSpecifiedEmail(imap, emailClient, emailId) {
+async function readInboxEmail(imap, emailClient, emailId) {
     let body = ''
     let header = ''
-    await new Promise(resolve => { 
+    await new Promise((resolve, reject) => { 
         imap.on('ready', () => {
-            console.log('hi')
         openTheInbox(imap, (err, box) => {
             if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
             imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
+                if (result == '') {
+                    return resolve(err)            
+                }
+                console.log('No email with that ID exists within the Inbox folder.', err)
                 console.log('result: ', result)
                 const latestMessage = imap.fetch(result, 
                 { 
@@ -106,9 +109,72 @@ async function readSpecifiedEmail(imap, emailClient, emailId) {
             })
     })})
     })
+    if (!body || !header) {
+        return false
+    }
     return { body, header }
 }
 
+async function readSentEmail(imap, emailClient, emailId) {
+    let body = ''
+    let header = ''
+    await new Promise(resolve => { 
+        imap.on('ready', () => {
+            openSentFolder(imap, emailClient, (err, box) => {
+            if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
+            imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
+                if (result == '') {
+                    return resolve(err)
+                }
+                console.log('No email with that ID exists within the Inbox folder.', err)
+                console.log('result: ', result)
+                const latestMessage = imap.fetch(result, 
+                { 
+                    bodies: 
+                    ['HEADER.FIELDS (FROM SUBJECT)', 'TEXT'],  
+                })              
+            latestMessage.on('message', (msg) => {   
+                let count = 0
+                
+                
+                msg.on('body', (stream) => {            
+                count++
+                stream.on('data', (chunk) => {              
+                    if (emailClient == 'gmail') {                  
+                        if (count == 1) {                                          
+                            body += chunk                 
+                        }
+                        else {
+                            header += chunk                  
+                        }               
+                    }                                                              
+                    else {
+                        if (count == 1) { 
+                            header += chunk                  
+                        }
+                        else {
+                            body += chunk                  
+                        }               
+                    }    
+                }) 
+                })
+                msg.once('end', () => {
+                    body = body.toString('utf8')
+                    header = header.toString('utf8')
+                    resolve(body, header)
+                    latestMessage.once('end', () => {
+                        imap.end()
+                    })
+                })    
+            }) 
+            })
+    })})
+    })
+    if (!body || !header) {
+        return false
+    }
+    return { body, header }
+}
 
 function openSentFolder(imap, emailClient, cb) {
     if (emailClient == 'gmail') {
@@ -169,7 +235,7 @@ return {body, header}
 }
 
 async function imapSequence() {
-    const imap = new Imap({
+    let imap = new Imap({
         user: account.user,
         password: account.pass,
         host: account.host,
@@ -189,6 +255,5 @@ async function imapSequence() {
     imap.connect();   
     return imap
 }
-
   
-module.exports = { readNewestEmail, readLastSent, readSpecifiedEmail, imapSequence }
+module.exports = { readNewestEmail, readLastSent, readInboxEmail, readSentEmail, imapSequence }
