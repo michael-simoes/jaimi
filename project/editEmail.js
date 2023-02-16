@@ -44,17 +44,18 @@ function cleanString(body) {
     .replaceAll('=C2=A0', '\'')
     .replaceAll('&nbsp;', '')
     .replaceAll('</o:p>', '')
-    // .replaceAll(' Content-Type: text/plain;', '')
     .replaceAll('Content-Type:', '')
+    .replaceAll('Content-Transfer-Encoding:', '')
+    .replaceAll('quoted-printable', '')  
     .replaceAll('text/html;', '')
     .replaceAll('"UTF-8"', '')
     .replaceAll('class=3D""', '')
     .replaceAll('<div>', '')
     .replaceAll('</div>', '')
     .replaceAll('=92', '’')
-    // .replaceAll('"UTF-8"', '') 
-    // .replaceAll('charset=', '')
-    // .replaceAll('text/plain;', '')
+    .replace('\n', '')
+    .replace('\n\n', '')
+    
     return body
 }
 
@@ -63,19 +64,21 @@ function cleanString(body) {
 ////NOTE: There may be a far better way to do this using indexOf('charset=', 20) and slicing the body string...
 ////see the third to last line of the function
 function removeExtraData(body) {
-    let splitArray = ''
-    splitText = body.split(' ')
-    const contentTransferEncodings = ['Content-Transfer-Encoding:', 'Content-Transfer-Encoding: ', 
-    ' Content-Transfer-Encoding:', '\nContent-Transfer-Encoding:', 'Content-Transfer-Encoding:\n'] 
+    // let splitArray = ''
+    // splitText = body.split(' ')
+    // const contentTransferEncodings = ['Content-Transfer-Encoding:', 'Content-Transfer-Encoding: ', 
+    // ' Content-Transfer-Encoding:', '\nContent-Transfer-Encoding:', 'Content-Transfer-Encoding:\n'] 
     
-    for (let i = 0; i < contentTransferEncodings.length; i++) {
-        if (splitText.indexOf(contentTransferEncodings[i]) != -1) {
-            splitArray = splitText.indexOf(contentTransferEncodings[i])
-            body = splitText.slice(splitArray + 1).join(' ').slice(17) 
-        }
+    // for (let i = 0; i < contentTransferEncodings.length; i++) {
+    //     if (splitText.indexOf(contentTransferEncodings[i]) != -1) {
+    //         splitArray = splitText.indexOf(contentTransferEncodings[i])
+    //         body = splitText.slice(splitArray + 1).join(' ').slice(17) 
+    //     }
+    // }
+    if (body.indexOf('charset=') == -1) {
+        return body
     }
-
-    body = body.slice(body.indexOf('charset=', 20) + 8)
+    body = body.slice(body.indexOf('charset=', 20) + 9)
     return body
 }
 
@@ -113,6 +116,7 @@ function removeReplyThread(body) {
         return cleanBody
 }
 
+///This doesn't work if the forward message has no content. This also doesn't work for Outlook
 function removeForwardThread(body) {
     splitText = body.split('\n')
     splitArray = splitText.indexOf('---------- Forwarded message ---------')

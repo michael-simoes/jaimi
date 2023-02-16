@@ -63,10 +63,9 @@ async function readInboxEmail(imap, emailClient, emailId) {
             if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
             imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
                 if (result == '') {
+                    console.log('No email with that ID exists within the Inbox folder.', err)
                     return resolve(err)            
                 }
-                console.log('No email with that ID exists within the Inbox folder.', err)
-                console.log('result: ', result)
                 const latestMessage = imap.fetch(result, 
                 { 
                     bodies: 
@@ -122,10 +121,9 @@ async function readSentEmail(imap, emailClient, emailId) {
             if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
             imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
                 if (result == '') {
+                    console.log('No email with that ID exists within the Inbox folder.', err)
                     return resolve(err)
                 }
-                console.log('No email with that ID exists within the Inbox folder.', err)
-                console.log('result: ', result)
                 const latestMessage = imap.fetch(result, 
                 { 
                     bodies: 
@@ -240,7 +238,6 @@ async function imapInit() {
         console.log(err);
     });
     
-    console.log('Connecting to new mail server')    
     imap.connect();   
 
     return imap

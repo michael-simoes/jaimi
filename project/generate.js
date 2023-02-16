@@ -7,28 +7,25 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-const fakeEmail = 'Hi Tomiwa, I’ve reviewed the Neo employment folder and am ready to move forward in the hiring process. Everything seems good to me. What are the next steps?'
-
-async function completion(prompt) {
+async function completion(prompt) {  
+  return 'This is just a test conducted without accessing the API.'
   try {
     const completion = await openai.createCompletion({
       model: "text-davinci-003",
       prompt: prompt,
-      temperature: 0.7,
+      temperature: 1.1,
       max_tokens: 500                                               
     });
-    console.log(completion.data.choices[0].text);   
+
+    return completion.data.choices[0].text   
   } catch(error) { console.log(error) }
 }
 
 
-function chase(email) {
-    let prompt = '' 
-    prompt = prompts.whoami + prompts.followUpCommand + prompts.respondingTo + prompts.firstSent + email + prompts.followUpExamples
-    console.log(prompt)
-    // completion(prompt)
-    
+async function chase(firstSent, replyingTo) {
+    return prompts.whoami + prompts.followUpCommand + replyingTo + firstSent + prompts.followUpExamples   
   };
 
 
-chase(fakeEmail)
+
+module.exports = { chase, completion }
