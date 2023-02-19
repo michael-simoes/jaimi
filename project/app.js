@@ -1,7 +1,7 @@
 console.log('app.js has run');
 const whereami = 'app.js'
 
-const { readNewestEmail, readLastSent, readInboxEmail, imapInit, readSentEmail, imapEnd } = require('./readMail.js');
+const { readLastSent, readEmail, imapInit, imapEnd} = require('./readMail.js');
 const account = require('./account.js');
 const prompts = require('./prompts.js');                        ///we shouldn't need this 
 const { parseBody, parseHeader } = require('./editEmail.js');
@@ -24,12 +24,27 @@ async function main() {
     fakeDb.subject = parsedHeader[2]; 
     fakeDb.sentBody = sentEmailBody;
     fakeDb.messageId = parsedHeader[3]
-
-    imap = await imapInit()    
-    let repliedToElements = await readInboxEmail(imap, account.mailbox, parsedHeader[4])
+    
+    //If there's no email that we're replying to, initiate the follow-up just using the first email
+    if (!parsedHeader[4]) {
+        console.log('No reply-to address')
+        return                          ///Go to generate --> send
+    }
+    
+    imap = await imapInit()   
+    repliedToElements = await readEmail(imap, account.mailbox, 'INBOX', parsedHeader[4])
     await imapEnd(imap)
-
+    ///Call this once searching the inbox folder, if you don't find anyting, call it again with 'SENT'
+    // console.log(parsedHeader[4])
+    // let repliedToElements = await readEmail(imap, account.mailbox, 'INBOX', parsedHeader[4])
+    if (!repliedToElements) {
+        imap = await imapInit()
+        repliedToElements = await readEmail(imap, account.mailbox, 'SENT', parsedHeader[4])
+        await imapEnd(imap)
+    }
     const repliedToBody = await parseBody(repliedToElements.body)
+    console.log('replied to elements', repliedToElements)
+    return
 
     fakeDb.repliedToBody = repliedToBody;
 
@@ -39,7 +54,18 @@ async function main() {
     const prompt = await chase(prompts.firstSent, prompts.respondingTo)
     const emailResponse = await completion(prompt)
 
-    emailSender('central.michael88@gmail.com', fakeDb.cc, fakeDb.subject, emailResponse, fakeDb.messageId)
+    
+    // emailSender('central.michael88@gmail.com', fakeDb.cc, fakeDb.subject, emailResponse, fakeDb.messageId)
+
+    // ///CHECK IF WE RECEIVED EMAIL FROM ADDRESS
+
+
+    // setTimeout(async () => {
+    //     emailSender('central.michael88@gmail.com', fakeDb.cc, fakeDb.subject, emailResponse, fakeDb.messageId)
+    // }, 10000)
+
+   
+
 
 
     // if (!repliedToElements) {

@@ -1,227 +1,115 @@
 const Imap = require('imap');
 const account = require('./account.js')
 
-
-
-
-async function openTheInbox(imap, cb) {
-    imap.openBox('INBOX', true, cb);
-}
-
-async function readNewestEmail(emailClient) { 
+async function reading() {
+    console.log('reading is called')
+    const imap = await imapInit()
     imap.on('ready', () => {
-        openTheInbox((err, box) => {
-            if (err) {throw new Error('Something has gone wrong with the openInbox function: ', err)}
-            const latestMessage = imap.seq.fetch(box.messages.total + ':*', 
-                { 
-                    bodies: 
-                    ['HEADER.FIELDS (FROM SUBJECT MESSAGE-ID)', 'TEXT'],  
-                }) 
-            latestMessage.on('message', (msg) => {   
-                let count = 0
-                let body = ''
-                let header = ''
-                msg.on('body', (stream) => {            ///RUNS TWICE (for email header and body)
-                count++
-                stream.on('data', (chunk) => {           ///RUNS AS MANY TIMES AS IS NECESSARY for each data stream (header and body)       
-                    if (emailClient == 'gmail') {                   //this should be refactored because it's not good to encode as utf-8
-                        if (count == 1) {                                           ///on each individual chunk. should be done at end
-                            body += chunk.toString('utf8')                 
-                        }
-                        else {
-                            header += chunk.toString('utf8')                  
-                        }               
-                    }                                                              
-                    else {
-                        if (count == 1) { 
-                            header += chunk.toString('utf8')                  
-                        }
-                        else {
-                            body += chunk.toString('utf8')                  
-                        }               
-                    }    
-                }) 
-                })
-                msg.once('end', () => {
-                    parseEmail(body, header)
-                    latestMessage.once('end', () => {
-                        // imap.end()
-                    })
-                })    
-            }) 
+        console.log('connected to imap')
+        openTheInbox(imap, (error, box) => {
+            imap.on('mail', (num) => {
+                console.log('MAIL RECEIVED')
             })
+        })
     })
 }
 
-///Get the original email we are replying to (for follow-ups)
-async function readInboxEmail(imap, emailClient, emailId) {
-    let body = ''
-    let header = ''
-    await new Promise((resolve, reject) => { 
-        imap.on('ready', () => {
-        openTheInbox(imap, (err, box) => {
-            if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
+// reading()
+async function openFolder(folder, imap, emailClient = null, cb) {
+    if (folder != 'SENT') {
+        imap.openBox('INBOX', true, cb)
+        return
+    }
+    if (emailClient == 'gmail') {
+        imap.openBox('[Gmail]/Sent Mail', true, cb)
+        return
+    }
+    imap.openBox('SENT', true, cb)
+    return
+}
+
+//Returns email message event based on emailId (or most recent email if no ID is provided)
+async function emailFetch(imap, emailId = 0, box) {
+    if (emailId != 0) {
+        let fetchedMessage = null
+        await new Promise(resolve => {
             imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
                 if (result == '') {
-                    console.log('No email with that ID exists within the Inbox folder.', err)
-                    return resolve(err)            
-                }
-                const latestMessage = imap.fetch(result, 
-                { 
-                    bodies: 
-                    ['HEADER.FIELDS (FROM SUBJECT)', 'TEXT'],  
-                })              
-            latestMessage.on('message', (msg) => {   
-                let count = 0
-                
-                
-                msg.on('body', (stream) => {            
-                count++
-                stream.on('data', (chunk) => {              
-                    if (emailClient == 'gmail') {                  
-                        if (count == 1) {                                          
-                            body += chunk                 
-                        }
-                        else {
-                            header += chunk                  
-                        }               
-                    }                                                              
-                    else {
-                        if (count == 1) { 
-                            header += chunk                  
-                        }
-                        else {
-                            body += chunk                  
-                        }               
-                    }    
-                }) 
-                })
-                msg.once('end', () => {
-                    body = body.toString('utf8')
-                    header = header.toString('utf8')
-                    resolve(body, header)
-                })    
-            }) 
+                console.log('No email with that ID exists within the Inbox folder.', err)
+                return resolve(1)
+            }
+            fetchedMessage = imap.fetch(result,
+            { 
+                bodies: 
+                ['HEADER.FIELDS (FROM SUBJECT)', 'TEXT'],  
             })
-    })})
+            resolve(fetchedMessage)
+        })
     })
-    if (!body || !header) {
-        // imap.end()
-        return false
+    return fetchedMessage
     }
-    return { body, header }
+    let fetchedMessage = imap.seq.fetch(box.messages.total + ':*',
+        { 
+            bodies: 
+            ['HEADER.FIELDS (TO CC SUBJECT MESSAGE-ID IN-REPLY-TO)', 'TEXT']           
+        })
+    return fetchedMessage   
 }
 
-async function readSentEmail(imap, emailClient, emailId) {
+//Calls readEmail function with paramters to search most recently sent email
+async function readLastSent(imap, emailClient) {
+    let result = await readEmail(imap, emailClient, 'SENT')
+    return result
+}
+
+//Based on parameters, will search for an email
+//If emailId is blank, will search for most recently sent or received email
+async function readEmail(imap, emailClient, folder, emailId) {
     let body = ''
     let header = ''
     await new Promise(resolve => { 
         imap.on('ready', () => {
-            openSentFolder(imap, emailClient, (err, box) => {
+            openFolder(folder, imap, emailClient, async (err, box) => {
             if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
-            imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
-                if (result == '') {
-                    console.log('No email with that ID exists within the Inbox folder.', err)
-                    return resolve(err)
-                }
-                const latestMessage = imap.fetch(result, 
-                { 
-                    bodies: 
-                    ['HEADER.FIELDS (FROM SUBJECT)', 'TEXT'],  
-                })              
-            latestMessage.on('message', (msg) => {   
+            let fetchedMessage = ''
+            if (emailId) {
+                fetchedMessage = await emailFetch(imap, emailId, box)    
+            }
+            else { 
+                fetchedMessage = await emailFetch(imap, 0, box)
+            }
+            //If there is no email matching search criteria, readEmail() returns FALSE
+            if (fetchedMessage == null) {
+                return resolve(false)
+            }         
+            fetchedMessage.on('message', (msg) => {   
                 let count = 0
-                
-                
-                msg.on('body', (stream) => {            
+                msg.on('body', (stream) => {             
                 count++
-                stream.on('data', (chunk) => {              
-                    if (emailClient == 'gmail') {                  
-                        if (count == 1) {                                          
-                            body += chunk                 
-                        }
+                    stream.on('data', (chunk) => {            
+                        if (emailClient == 'gmail') {                  
+                            if (count == 1) { body += chunk }
+                            else { header += chunk }               
+                        }                                                              
                         else {
-                            header += chunk                  
-                        }               
-                    }                                                              
-                    else {
-                        if (count == 1) { 
-                            header += chunk                  
-                        }
-                        else {
-                            body += chunk                  
-                        }               
-                    }    
-                }) 
+                            if (count == 1) { header += chunk }                  
+                            else { body += chunk }               
+                        }    
+                    }) 
                 })
                 msg.once('end', () => {
                     body = body.toString('utf8')
-                    header = header.toString('utf8')
+                    header = header.toString('utf8')                    
                     resolve(body, header)
                 })    
             }) 
-            })
-    })})
+            
+        })})
     })
     if (!body || !header) {
         return false
     }
     return { body, header }
-}
-
-function openSentFolder(imap, emailClient, cb) {
-    if (emailClient == 'gmail') {
-        imap.openBox('[Gmail]/Sent Mail', true, cb);
-    }
-    else {imap.openBox('SENT', true, cb);}
-}
-
-
-async function readLastSent(imap, emailClient) {  
-    let body = ''    
-    let header = ''                            
-    await new Promise(resolve => {
-        imap.on('ready', () => {
-        openSentFolder(imap, emailClient, (err, box) => {
-            if (err) {throw new Error('Something has gone wrong with the openSentFolder function: ', console.log(err))}
-            const latestMessage = imap.seq.fetch(box.messages.total + ':*',
-            { 
-                bodies: 
-                ['HEADER.FIELDS (TO CC SUBJECT MESSAGE-ID IN-REPLY-TO)', 'TEXT']           
-            })                                                             
-                latestMessage.on('message', (msg) => {
-                let count = 0
-                    msg.on('body', (stream) => {
-                    count++
-                    stream.on('data', (chunk) => {          
-                        if (emailClient == 'gmail') {                   
-                            if (count == 1) {                                           
-                                body += chunk                 
-                            }
-                            else {
-                                header += chunk                  
-                            }               
-                        }                                                              
-                        else {
-                            if (count == 1) { 
-                                header += chunk                  
-                            }
-                            else {
-                                body += chunk                  
-                            }               
-                        }   
-                    }) 
-               }) 
-                msg.once('end', () => {
-                    header = header.toString('utf8')
-                    body = body.toString('utf8')
-                    resolve(body, header)             
-                })    
-            })
-        }) 
-        })
-    })
-return {body, header}
 }
 
 async function imapInit() {
@@ -233,13 +121,10 @@ async function imapInit() {
         tls: true,
         tlsOptions: { rejectUnauthorized: false }
     });
-
     imap.once('error', (err) => {
         console.log(err);
     });
-    
-    imap.connect();   
-
+    imap.connect();  
     return imap
 }
 
@@ -250,4 +135,4 @@ async function imapEnd(imap) {
     });
 }
   
-module.exports = { readNewestEmail, readLastSent, readInboxEmail, readSentEmail, imapInit, imapEnd }
+module.exports = { readLastSent, readEmail, imapInit, imapEnd }
