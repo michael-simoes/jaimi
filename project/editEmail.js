@@ -55,6 +55,8 @@ function cleanString(body) {
     .replaceAll('=92', '’')
     .replace(/^(\n)/, '')
     .replaceAll(/\b=20\b/g, '\n')
+    .replaceAll(/\b[?]=20\b/g, '?\n')
+    .replaceAll(/\b[.!]=20\b/g, '.\n')
     // .replace(/^(\n\n)/, '')
     return body
 }
@@ -98,7 +100,6 @@ function removeReplyThread(body) {
          splitText[i + 2].indexOf('To: ') == 0) {
              splitText = splitText.slice(0, i)
              cleanBody = splitText.join('\n')
-             console.log(splitText)
              break
             }
         }
