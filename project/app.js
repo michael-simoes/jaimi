@@ -34,23 +34,22 @@ async function main() {
     imap = await imapInit()   
     repliedToElements = await readEmail(imap, account.mailbox, 'INBOX', parsedHeader[4])
     await imapEnd(imap)
-    ///Call this once searching the inbox folder, if you don't find anyting, call it again with 'SENT'
-    // console.log(parsedHeader[4])
-    // let repliedToElements = await readEmail(imap, account.mailbox, 'INBOX', parsedHeader[4])
+    
     if (!repliedToElements) {
         imap = await imapInit()
         repliedToElements = await readEmail(imap, account.mailbox, 'SENT', parsedHeader[4])
         await imapEnd(imap)
     }
     const repliedToBody = await parseBody(repliedToElements.body)
-    console.log('replied to elements', repliedToElements)
-    return
+    const repliedtoHeader = await parseHeader(repliedToElements.header)
+    console.log(repliedtoHeader, repliedToBody)
 
-    fakeDb.repliedToBody = repliedToBody;
+    fakeDb.repliedToBody = repliedToBody
 
     prompts.respondingTo = fakeDb.repliedToBody
     prompts.firstSent += fakeDb.sentBody
 
+return
     const prompt = await chase(prompts.firstSent, prompts.respondingTo)
     const emailResponse = await completion(prompt)
 

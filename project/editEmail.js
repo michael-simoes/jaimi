@@ -53,9 +53,9 @@ function cleanString(body) {
     .replaceAll('<div>', '')
     .replaceAll('</div>', '')
     .replaceAll('=92', '’')
-    .replace('\n', '')
-    .replace('\n\n', '')
-    
+    .replace(/^(\n)/, '')
+    .replaceAll(/\b=20\b/g, '\n')
+    // .replace(/^(\n\n)/, '')
     return body
 }
 
@@ -90,18 +90,20 @@ function removeReplyThread(body) {
          cleanBody = cleanBody.split('> On ').slice(0, 1).join('')
      }
      
-     //Remove reply threads that are not indented but have a "from, sent, to" header attached
-     splitText = cleanBody.split('\n')
+     //Remove reply threads that are not indented but have a "from, sent, to" header attached 
+     let splitText = cleanBody.split('\n')
      for (let i = 0; i < splitText.length -3; i++) {
          if (splitText[i].indexOf('From: ') == 0 &&
-             splitText[i + 1].indexOf('Sent: ') == 0 &&
-             splitText[i + 2].indexOf('To: ') == 0) {
+         splitText[i + 1].indexOf('Sent: ') == 0 &&
+         splitText[i + 2].indexOf('To: ') == 0) {
              splitText = splitText.slice(0, i)
              cleanBody = splitText.join('\n')
+             console.log(splitText)
              break
-         }
-     }
-     //Remove reply threads characterized by the ">" character on every line, and "<email address> wrote:" on the line before
+            }
+        }
+        
+        //Remove reply threads characterized by the ">" character on every line, and "<email address> wrote:" on the line before
      for (let i = 0; i < splitText.length -3; i++) {
          if (splitText[i].indexOf('> wrote:') > -1 &&
              splitText[i + 3].indexOf('>') == 0 ||
@@ -191,14 +193,15 @@ async function parseHeader(header) {
 
 async function parseBody(body, header) {
     cleanBody = await convertHtml(body)
+    // If the email has content-disposition attribute or it's super long, throw an error
+    // It's likely that the email contains an attachment or image which we cannot process yet
+    if (cleanBody.indexOf('Content-Disposition:') != -1 || cleanBody.length > 1500) {
+        throw new Error('This email could not be read. It contains an attachment or image. Review parsedBody function.')
+    }
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
-    cleanBody = await removeForwardThread(cleanBody)
-    if (cleanBody.slice(0, 1000).indexOf('\n') == -1 && cleanBody.length > 300) {
-        console.log('This email could not be read. It contains an attachment or image.')
-        return
-    }
+    cleanBody = await removeForwardThread(cleanBody)    
     return cleanBody
 }
 
