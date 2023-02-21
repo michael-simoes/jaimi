@@ -1,20 +1,7 @@
 const Imap = require('imap');
 const account = require('./account.js')
 
-async function reading() {
-    console.log('reading is called')
-    const imap = await imapInit()
-    imap.on('ready', () => {
-        console.log('connected to imap')
-        openTheInbox(imap, (error, box) => {
-            imap.on('mail', (num) => {
-                console.log('MAIL RECEIVED')
-            })
-        })
-    })
-}
 
-// reading()
 async function openFolder(folder, imap, emailClient = null, cb) {
     if (folder != 'SENT') {
         imap.openBox('INBOX', true, cb)
@@ -59,6 +46,11 @@ async function emailFetch(imap, emailId = 0, box) {
 //Calls readEmail function with paramters to search most recently sent email
 async function readLastSent(imap, emailClient) {
     let result = await readEmail(imap, emailClient, 'SENT')
+    return result
+}
+
+async function readLastReceived(imap, emailClient) {
+    let result = await readEmail(imap, emailClient, 'INBOX')
     return result
 }
 
@@ -135,4 +127,4 @@ async function imapEnd(imap) {
     });
 }
   
-module.exports = { readLastSent, readEmail, imapInit, imapEnd }
+module.exports = { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived }

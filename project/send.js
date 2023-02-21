@@ -23,6 +23,8 @@ const smtpConfig = {
   
 
 async function emailSender(to, cc, subject, text, messageId) {
+  console.log('Pretend an email was sent...', to, subject, text)
+  return                     // don't spam me to death
   transporter.sendMail({ 
     from: account.user,
     to: to,
@@ -33,4 +35,4 @@ async function emailSender(to, cc, subject, text, messageId) {
   })
 }
 
-module.exports = emailSender
+module.exports = { emailSender }

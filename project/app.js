@@ -1,12 +1,12 @@
 console.log('app.js has run');
 const whereami = 'app.js'
 
-const { readLastSent, readEmail, imapInit, imapEnd} = require('./readMail.js');
+const { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived } = require('./readMail.js');
 const account = require('./account.js');
 const promptComponents = require('./prompts.js');                        ///we shouldn't need this 
 const { parseBody, parseHeader } = require('./editEmail.js');
 const { chase, completion } = require('./generate.js')
-const emailSender = require('./send.js')
+const { emailSender }= require('./send.js')
 
 async function main() {   
     const emailElements = await connection(readLastSent, true)
@@ -26,46 +26,58 @@ async function main() {
     const repliedtoHeader = await parseHeader(repliedToElements.header)
 
 
-    // Something like this works to attach email addresses to Timeouts that are running followups
-    let followUps = {}
-    async function followup(email) {
-        
-        const timeoutId = setTimeout(() => {
-            console.log("Hello World");          /// Send followup email
-            followup()                            // restart sequence!
-        }, 2000);
-        
-        followUps[email] = timeoutId
-        console.log(followUps)
-        
-        // clearTimeout(followUps[email]);       // until this gets called
-        
-        console.log(`Timeout ID ${timeoutId} has been cleared`);
-    }
-    
-    followup('central.michael88@gmail.com')
-
-
-  
-
     for (let i = 0; i < 2; i++) {
-        console.log('run', i)
         const list = ['a', 'b', 'c']
         let k = list[i]
         promptComponents[k] = 'hello' }
     // console.log(promptComponents)
-    return
 
-    // TO DO:
-    // Create cancellable timeout event after email is sent that calls func after 72 hours. 
-    // Create unique timeout ID based on email that is being chased
+    
     const prompt = await chase(promptComponents.firstSent, promptComponents.respondingTo)
-    const emailResponse = await completion(prompt)
+    const aiFollowUp = await completion(prompt)
+    // TO DO:
+    // After sending email, create cancellable timeout event set for like 2 minutes of no reply from that email.
+    // Cancel timeout with ID: EMAIL based on if imap.('mail') has detected an email from original replyTo
+    let followUps = {}
+    let imap = await imapInit()
+    followUps[sentEmailHeader[0]] = await countdown(sentEmailHeader[0], sentEmailHeader[1], sentEmailHeader[2], aiFollowUp, sentEmailHeader[4])
+    monitor(imap, account.mailbox, 'INBOX', followUps, sentEmailHeader[0])
+
 }
 
-async function connection(func, lastSent, folder, messageId) {
+async function countdown(to, cc, subject, body, messageId) {
+    console.log('countdown called')
+    const timeoutId = setTimeout(async () => {
+        await emailSender(to, cc, subject, body, messageId)
+        countdown(to, cc, subject, body, messageId)    /// re runs until response
+    }, 12000)
+    
+    // Save timeoutId so this timeout can be cancelled if mail is received for it
+    return timeoutId    
+}
+
+async function monitor(imap, emailClient, folder, followUps, targetEmail) {          /// this becomes second main function. wrap everything in it 
+    imap.on('ready', () => {
+    openFolder(folder, imap, emailClient, (error, box) => {
+    let result = ''
+    let header = ''
+        imap.on('mail', async (num) => {
+        result = await connection(readLastReceived, true)
+        header = await parseHeader(result.header)
+        if (header[0] == targetEmail) {
+            clearTimeout(followUps[targetEmail])
+            console.log('countdown aborted')
+        }
+        console.log(header[0])
+        console.log('MAIL RECEIVED!')
+        })
+    })
+})
+}
+
+async function connection(func, latest, folder, messageId) {
     const imap = await imapInit()
-    if (lastSent) {
+    if (latest) {
         const result = await func(imap, account.mailbox)
         await imapEnd(imap)
         return result
