@@ -38,7 +38,7 @@ async function emailFetch(imap, emailId = 0, box) {
     let fetchedMessage = imap.seq.fetch(box.messages.total + ':*',
         { 
             bodies: 
-            ['HEADER.FIELDS (TO CC SUBJECT MESSAGE-ID IN-REPLY-TO)', 'TEXT']           
+            ['HEADER.FIELDS (TO CC SUBJECT MESSAGE-ID IN-REPLY-TO FROM)', 'TEXT']           
         })
     return fetchedMessage   
 }

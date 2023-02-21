@@ -146,10 +146,11 @@ function checkForMarketing(body) {
 async function parseHeader(header) {
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
+    console.log(splitHead)
     let to = '', cc = '', subject = '', messageId = '', replyToId = ''
     let func = ''
     const headerObject = { 
-       charOptions: [ 'T', 'C', 'S', 'M', 'I'],
+       charOptions: [ 'T', 'C', 'S', 'M', 'I', 'F'],
        headerElements: [to, cc, subject, messageId, replyToId], 
        charCleaners: { 
             'T': (param) => { 
@@ -168,8 +169,16 @@ async function parseHeader(header) {
             'I': (param) => { 
                 return param.replace(/(.*)</g, '').replace('>', '') 
             },
+            'F': (param) => { 
+                return param.replace('From: ', '') 
+            },
         } 
     }
+
+
+// HEADER ARRAY ELEMENTS ARE IN DIFFERENT ORDER DEPENDING ON EMAIL SERVER THAT SENDS IT
+// Sometimes in-reply-to ID is on the same line, sometimes it's not. 
+// Need to identify the elements properly, can't just go based on index since it changes
 
     for (let i = 0; i < splitHead.length; i++) {
         //Message-ID and Reply-To-ID get messed up in Outlook. This identifies 

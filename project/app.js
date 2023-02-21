@@ -12,17 +12,19 @@ async function main() {
     const emailElements = await connection(readLastSent, true)
     promptComponents.firstSent += await parseBody(emailElements.body) 
     const sentEmailHeader = await parseHeader(emailElements.header)
+    // console.log(sentEmailHeader)
     
     //If there's no email that we're replying to, initiate the follow-up just using the first email
     if (!sentEmailHeader[4]) {
         console.log('No reply-to address')
         return                          ///Go to generate --> send
     }
-    let repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
+    let repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[5])
     if (!repliedToElements) {
-        repliedToElements = await connection(readEmail, false, 'INBOX', sentEmailHeader[4])
+        repliedToElements = await connection(readEmail, false, 'INBOX', sentEmailHeader[5])
     }
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
+    console.log(repliedToElements.header)
     const repliedtoHeader = await parseHeader(repliedToElements.header)
 
 
@@ -30,27 +32,26 @@ async function main() {
         const list = ['a', 'b', 'c']
         let k = list[i]
         promptComponents[k] = 'hello' }
-    // console.log(promptComponents)
-
-    
-    const prompt = await chase(promptComponents.firstSent, promptComponents.respondingTo)
-    const aiFollowUp = await completion(prompt)
     // TO DO:
     // After sending email, create cancellable timeout event set for like 2 minutes of no reply from that email.
     // Cancel timeout with ID: EMAIL based on if imap.('mail') has detected an email from original replyTo
     let followUps = {}
     let imap = await imapInit()
-    followUps[sentEmailHeader[0]] = await countdown(sentEmailHeader[0], sentEmailHeader[1], sentEmailHeader[2], aiFollowUp, sentEmailHeader[4])
+    followUps[sentEmailHeader[0]] = await countdown(
+        sentEmailHeader[0], sentEmailHeader[1], sentEmailHeader[2], sentEmailHeader[4], 
+        promptComponents.firstSent, promptComponents.respondingTo);
     monitor(imap, account.mailbox, 'INBOX', followUps, sentEmailHeader[0])
 
 }
 
-async function countdown(to, cc, subject, body, messageId) {
+async function countdown(to, cc, subject, messageId, firstSent, respondingTo) {
     console.log('countdown called')
     const timeoutId = setTimeout(async () => {
-        await emailSender(to, cc, subject, body, messageId)
-        countdown(to, cc, subject, body, messageId)    /// re runs until response
-    }, 12000)
+        const prompt = await chase(firstSent, respondingTo)
+        const aiFollowUp = await completion(prompt)
+        await emailSender(to, cc, subject, aiFollowUp, messageId)
+        countdown(to, cc, subject, messageId)                         /// re runs until response
+    }, 6000)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     return timeoutId    

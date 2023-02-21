@@ -23,8 +23,9 @@ const smtpConfig = {
   
 
 async function emailSender(to, cc, subject, text, messageId) {
-  console.log('Pretend an email was sent...', to, subject, text)
-  return                     // don't spam me to death
+  console.log(to, subject, text)
+  return
+                                 // don't spam me to death
   transporter.sendMail({ 
     from: account.user,
     to: to,
