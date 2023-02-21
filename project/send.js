@@ -23,14 +23,14 @@ const smtpConfig = {
   
 
 async function emailSender(to, cc, subject, text, messageId) {
-  console.log(to, subject, text)
-  return
+  // console.log(to, subject, text)
+  // return
                                  // don't spam me to death
   transporter.sendMail({ 
     from: account.user,
     to: to,
     cc: cc,
-    subject: 'RE: ' + subject,
+    subject: subject,
     text: text,
     inReplyTo: messageId,
   })

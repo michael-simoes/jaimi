@@ -146,12 +146,12 @@ function checkForMarketing(body) {
 async function parseHeader(header) {
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
-    console.log(splitHead)
-    let to = '', cc = '', subject = '', messageId = '', replyToId = ''
+    // console.log(splitHead)
+    let to = '', cc = '', subject = '', messageId = '', replyToId = '', from = '';
     let func = ''
     const headerObject = { 
        charOptions: [ 'T', 'C', 'S', 'M', 'I', 'F'],
-       headerElements: [to, cc, subject, messageId, replyToId], 
+       headerElements: [to, cc, subject, messageId, replyToId, from], 
        charCleaners: { 
             'T': (param) => { 
                 return param.replaceAll(/(.*)</g, '').replaceAll('>', '') 
@@ -170,15 +170,11 @@ async function parseHeader(header) {
                 return param.replace(/(.*)</g, '').replace('>', '') 
             },
             'F': (param) => { 
-                return param.replace('From: ', '') 
+                return param.replaceAll(/(.*)</g, '').replaceAll('>', '')
             },
         } 
     }
-
-
-// HEADER ARRAY ELEMENTS ARE IN DIFFERENT ORDER DEPENDING ON EMAIL SERVER THAT SENDS IT
-// Sometimes in-reply-to ID is on the same line, sometimes it's not. 
-// Need to identify the elements properly, can't just go based on index since it changes
+    // const headObject = {}
 
     for (let i = 0; i < splitHead.length; i++) {
         //Message-ID and Reply-To-ID get messed up in Outlook. This identifies 
@@ -198,6 +194,7 @@ async function parseHeader(header) {
             }
         }
     }
+    console.log(headerObject.headerElements)
     return headerObject.headerElements
 }
 
