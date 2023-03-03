@@ -1,6 +1,7 @@
 const Imap = require('imap');
 const account = require('./account.js')
-
+require('dotenv').config({ path: '../.env.gmail' })
+// require('dotenv').config({ path: '../.env.other' })
 
 async function openFolder(folder, imap, emailClient = null, cb) {
     if (folder != 'SENT') {
@@ -106,9 +107,9 @@ async function readEmail(imap, emailClient, folder, emailId) {
 
 async function imapInit() {
     let imap = new Imap({
-        user: account.user,
-        password: account.pass,
-        host: account.host,
+        user: process.env.USER,
+        password: process.env.PASS,
+        host: process.env.IMAP_DOMAIN,
         port: 993,
         tls: true,
         tlsOptions: { rejectUnauthorized: false }

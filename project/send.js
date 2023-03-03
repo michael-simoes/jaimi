@@ -2,6 +2,8 @@ console.log('send.js has run')
 
 const nodemailer = require('nodemailer')
 const account = require('./account.js')
+// require('dotenv').config({ path: '../.env.gmail' })
+require('dotenv').config({ path: '../.env.other' })
 
 const smtpConfig = {                      
     // sendmail: true,
@@ -23,11 +25,11 @@ const smtpConfig = {
   
 
 async function emailSender(to, cc, subject, text, messageId) {
-  // console.log(to, subject, text)
-  // return
+  console.log(to, subject, text)
+  return
                                  // don't spam me to death
   transporter.sendMail({ 
-    from: account.user,
+    from: process.env.SMTP_DOMAIN,
     to: to,
     cc: cc,
     subject: subject,

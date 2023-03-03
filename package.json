@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.0.3",
     "html-to-text": "^9.0.3",
     "imap": "^0.8.19",
     "luxon": "^3.2.1",
