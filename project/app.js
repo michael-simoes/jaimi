@@ -1,18 +1,53 @@
 console.log('app.js has run');
-require('dotenv').config({ path: '../.env.gmail' })
-// require('dotenv').config({ path: '../.env.other' })
+// require('dotenv').config({ path: '../.env.gmail' })
+require('dotenv').config({ path: '../.env.other' })
 const { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived } = require('./readMail.js');
-const account = require('./account.js');
-const promptComponents = require('./prompts.js');                        ///we shouldn't need this 
+const promptComponents = require('./prompts.js');                     
 const { parseBody, parseHeader } = require('./editEmail.js');
 const { chase, completion } = require('./generate.js')
 const { emailSender } = require('./send.js')
+const instruction = require('prompt-sync')({sigint: true});
 
 
-// Something to add would be someone replying on someone else's behalf? 
-// Or maybe this is a fringe case and you can manually terminate the process? 
-///////////////////// So maybe it's just manual termination that's required?
 const mailbox = process.env.MAILBOX
+
+let exit = false;
+while (!exit) {
+    console.log(
+        `Enter a command:
+        'chase' = initiate follow-up sequence on most recently sent email
+        'exit' = exit the application and all active follow-up sequences`
+        )
+    let selection = instruction('>> ');
+    selection = selection.toLowerCase()
+    if (selection == 'chase') {
+        console.log('Chase sequence initiated.');
+        main()
+    } 
+    else if (selection == 'exit') {
+        console.log('Exiting application.')
+        exit = true
+    }
+    else {
+        console.log('Invalid selection.');
+    }
+}
+
+
+// const numberToGuess = Math.floor(Math.random() * 10) + 1;
+// let foundCorrectNumber = false;
+
+// while (!foundCorrectNumber) {
+//   let guess = prompt('Guess a number from 1 to 10: ');
+
+//   if (guess == numberToGuess) {
+//     console.log('Congrats, you got it!');
+//     foundCorrectNumber = true;
+//   } 
+//   else {
+//     console.log('Sorry, guess again!');
+//   }
+// }
 
 async function main() {   
     console.log(process.env.USER)
@@ -93,5 +128,3 @@ async function connection(func, latest, folder, messageId) {
     await imapEnd(imap)
     return result
 }
-
-main()

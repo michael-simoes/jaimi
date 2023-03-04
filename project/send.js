@@ -1,13 +1,10 @@
 console.log('send.js has run')
 
 const nodemailer = require('nodemailer')
-const account = require('./account.js')
-// require('dotenv').config({ path: '../.env.gmail' })
-require('dotenv').config({ path: '../.env.other' })
 
 const smtpConfig = {                      
     // sendmail: true,
-    host: account.smtp,
+    host: process.env.SMTP_DOMAIN,
     port: 587,
     // secure: true,
     // tls: 'outlook.com', 
@@ -16,8 +13,8 @@ const smtpConfig = {
       ciphers: 'SSLv3'
   },
     auth: {
-        user: account.user,
-        pass: account.pass
+        user: process.env.USER,
+        pass: process.env.PASS
     }
   };
   

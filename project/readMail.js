@@ -1,7 +1,4 @@
 const Imap = require('imap');
-const account = require('./account.js')
-require('dotenv').config({ path: '../.env.gmail' })
-// require('dotenv').config({ path: '../.env.other' })
 
 async function openFolder(folder, imap, emailClient = null, cb) {
     if (folder != 'SENT') {
