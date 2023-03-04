@@ -23,10 +23,10 @@ const smtpConfig = {
 
 async function emailSender(to, cc, subject, text, messageId) {
   console.log(to, subject, text)
-  return
-                                 // don't spam me to death
+  // return
+                                 
   transporter.sendMail({ 
-    from: process.env.SMTP_DOMAIN,
+    from: process.env.USER,
     to: to,
     cc: cc,
     subject: subject,

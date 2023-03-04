@@ -1,38 +1,69 @@
 console.log('app.js has run');
-// require('dotenv').config({ path: '../.env.gmail' })
-require('dotenv').config({ path: '../.env.other' })
+require('dotenv').config({ path: '../.env.gmail' })
+// require('dotenv').config({ path: '../.env.other' })
 const { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived } = require('./readMail.js');
 const promptComponents = require('./prompts.js');                     
 const { parseBody, parseHeader } = require('./editEmail.js');
 const { chase, completion } = require('./generate.js')
 const { emailSender } = require('./send.js')
 const instruction = require('prompt-sync')({sigint: true});
+const EventEmitter = require('events');
 
 
 const mailbox = process.env.MAILBOX
 
-let exit = false;
-while (!exit) {
-    console.log(
-        `Enter a command:
-        'chase' = initiate follow-up sequence on most recently sent email
-        'exit' = exit the application and all active follow-up sequences`
-        )
+
+const eventEmitter = new EventEmitter();
+
+eventEmitter.on('chase', () => {
+    console.log('chase sequence started');
+    main()
     let selection = instruction('>> ');
-    selection = selection.toLowerCase()
-    if (selection == 'chase') {
-        console.log('Chase sequence initiated.');
-        main()
-    } 
-    else if (selection == 'exit') {
-        console.log('Exiting application.')
-        exit = true
-    }
-    else {
-        console.log('Invalid selection.');
+        selection = selection.toLowerCase()
+        if (selection == 'chase') {
+            console.log('Chase sequence initiated.');
+            eventEmitter.emit('chase');            
+        } 
+});
+  
+// eventEmitter.emit('chase');
+
+const express = require('express')
+const app = express()
+
+// // respond with "hello world" when a GET request is made to the homepage
+// app.get('/asdf', (req, res) => {
+//   res.send('hello world')
+//   console.log('REQUEST LOGGED')
+//   main()
+// })
+
+// app.listen(3000)
+
+
+async function test() {
+    let exit = false;
+    while (!exit) {
+        console.log(
+            `Enter a command:
+            'chase' = initiate follow-up sequence on most recently sent email
+            'exit' = exit the application and all active follow-up sequences`
+            )
+        let selection = instruction('>> ');
+        selection = selection.toLowerCase()
+        if (selection == 'chase') {
+            console.log('Chase sequence initiated.');
+            main()
+        } 
+        else if (selection == 'exit') {
+            console.log('Exiting application.')
+            exit = true
+        }
+        else {
+            console.log('Invalid selection.');
+        }
     }
 }
-
 
 // const numberToGuess = Math.floor(Math.random() * 10) + 1;
 // let foundCorrectNumber = false;
@@ -86,7 +117,7 @@ async function countdown(emailHeaders, promptComponents) {
         await emailSender(to, cc, subject, aiFollowUp, messageId)
         await imapEnd(imap)                           /// can't terminate the connection here obviously
         countdown(emailHeaders, promptComponents)                         /// re runs until response
-    }, 30000)
+    }, 3000)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     // console.log(timeoutId)
