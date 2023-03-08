@@ -86,43 +86,32 @@ function removeExtraData(body) {
 
 function removeReplyThread(body) {
     //Remove reply threads that are indented
-     let cleanBody = body
-     splitArray = cleanBody.indexOf('> On ')
-     if (splitArray != -1) {
-         cleanBody = cleanBody.split('> On ').slice(0, 1).join('')
-     }
+    let cleanBody = body
+    splitArray = cleanBody.indexOf('> On ')
+    if (splitArray != -1) {
+        cleanBody = cleanBody.split('> On ').slice(0, 1).join('')
+    }
      
+    // Replace the '<email@email.com>' that precedes reply threads if there is one
+    cleanBody = cleanBody.replace(/<(.*)> wrote:/g, '<RMVBEYOND>')    
+    
      //Remove reply threads that are not indented but have a "from, sent, to" header attached 
-     let splitText = cleanBody.split('\n')
-     for (let i = 0; i < splitText.length -3; i++) {
-         if (splitText[i].indexOf('From: ') == 0 &&
-         splitText[i + 1].indexOf('Sent: ') == 0 &&
-         splitText[i + 2].indexOf('To: ') == 0) {
-             splitText = splitText.slice(0, i)
-             cleanBody = splitText.join('\n')
-             break
-            }
+    let splitText = cleanBody.split('\n')
+    for (let i = 0; i < splitText.length -3; i++) {
+        if (splitText[i].indexOf('From: ') == 0 &&
+        splitText[i + 1].indexOf('Sent: ') == 0 &&
+        splitText[i + 2].indexOf('To: ') == 0) {
+            splitText = splitText.slice(0, i)
+            cleanBody = splitText.join('\n')
+            break
         }
-        console.log(splitText)
-        //Remove reply threads characterized by the ">" character on every line, and "<email address> wrote:" on the line before
-     
-     // THIS IS WAY TOO PICKY
-     // REPLACE <EMAIL@EMAIL.COM> WITH <somechars>
-     //// get indexOf '<somechars> wrote:'
-     ////// slice on wherever this is and rejoin 
-        for (let i = 0; i < splitText.length -3; i++) {
-         if (splitText[i].indexOf('> wrote:') != -1 &&
-             splitText[i + 3].indexOf('>') == 0 ||
-             splitText[i + 2].indexOf('>') == 0 &&
-             splitText[i + 4].indexOf('>') == 0 &&
-             splitText[i + 5].indexOf('Subject: ') == 0) {
-                console.log('THIS IS NOT GETTING TRIGGERD')
-                splitText = splitText.slice(0, i)
-                cleanBody = splitText.join('\n')
-                break
-         }
+        if (splitText[i].indexOf('<RMVBEYOND>') != -1) {
+            splitText = splitText.slice(0, i)
+            cleanBody = splitText.join('\n')
+            break
         }
-        return cleanBody
+    }
+    return cleanBody
 }
 
 ///This doesn't work if the forward message has no content. This also doesn't work for Outlook
@@ -226,7 +215,7 @@ async function parseBody(body) {
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)    
-    // console.log('cleanbody', cleanBody)
+    console.log('cleanbody', cleanBody)
     return cleanBody
 }
 
