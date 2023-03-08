@@ -194,18 +194,28 @@ async function parseHeader(header) {
             }
         }
     }
-    console.log(headerObject.headerElements)
     return headerObject.headerElements
 }
 
-async function parseBody(body, header) {
-    cleanBody = await convertHtml(body)
-    // console.log('BODY:', body.split(' '))
+async function decode64(body) {
+    let base64 = body.slice(0, 100).indexOf(' ')
+    if (base64 == -1) {
+        let buffer = Buffer.from(body, 'base64')
+        return buffer.toString('utf8')
+    }
+    return body
+}
+
+async function parseBody(body) {
+    cleanBody = await decode64(body)
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
-    if (cleanBody.indexOf('Content-Disposition:') != -1 || cleanBody.length > 1500) {
-        throw new Error('This email could not be read. It contains an attachment or image. Review parsedBody function.')
+    if (cleanBody.indexOf('Content-Disposition:') != -1 || 
+    cleanBody.indexOf('Content-Type: multipart/alternative') != -1 || 
+    cleanBody.length > 2500) {
+        throw new Error('This email could not be read. It contains an attachment, image or is super duper long. Review parsedBody function.')
     }
+    cleanBody = await convertHtml(cleanBody)
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)

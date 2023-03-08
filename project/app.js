@@ -102,10 +102,7 @@ async function test() {
 // }
 
 async function main() {   
-    console.log(process.env.USER)
     const emailElements = await connection(readLastSent, true)
-    // console.log(emailElements.body)
-    // console.log(emailElements.header)
     try {
         promptComponents.firstSent += await parseBody(emailElements.body) 
     } catch (e) {
@@ -124,7 +121,7 @@ async function main() {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
     }
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
-
+    
     // TO DO:
     // After sending email, create cancellable timeout event set for like 2 minutes of no reply from that email.
     // Cancel timeout with ID: EMAIL based on if imap.('mail') has detected an email from original replyTo
