@@ -11,95 +11,24 @@ const EventEmitter = require('events');
 
 
 const mailbox = process.env.MAILBOX
-
-
 const eventEmitter = new EventEmitter();
-
-// try with native readline
-// make the console request for input from user a promise?
-// eventEmitter.on('chase', async () => {
-//     console.log('chase sequence started');
-//     await main()
-//     let selection = instruction('>> ');
-//         selection = selection.toLowerCase()
-//         if (selection == 'chase') {
-//             console.log('Chase sequence initiated.');
-//             eventEmitter.emit('chase');            
-//         } 
-// });
-
 const readline = require('readline').createInterface({
     input: process.stdin,
     output: process.stdout
   });
   
-  eventEmitter.on('chase', async () => {  
+eventEmitter.on('chase', async () => {  
     console.log('chase sequence started');
     main()
     readline.question('Who are you?', (input) => {
         if (input == 'hello') {
-        console.log(`Hey there ${input}!`);
-        eventEmitter.emit('chase');
+            console.log(`Hey there ${input}!`);
+            eventEmitter.emit('chase');
     }
   })
 })
 
-
 eventEmitter.emit('chase');
-
-
-
-// const express = require('express')
-// const app = express()
-
-// // respond with "hello world" when a GET request is made to the homepage
-// app.get('/asdf', (req, res) => {
-//   res.send('hello world')
-//   console.log('REQUEST LOGGED')
-//   main()
-// })
-
-// app.listen(3000)
-
-
-async function test() {
-    let exit = false;
-    while (!exit) {
-        console.log(
-            `Enter a command:
-            'chase' = initiate follow-up sequence on most recently sent email
-            'exit' = exit the application and all active follow-up sequences`
-            )
-        let selection = instruction('>> ');
-        selection = selection.toLowerCase()
-        if (selection == 'chase') {
-            console.log('Chase sequence initiated.');
-            main()
-        } 
-        else if (selection == 'exit') {
-            console.log('Exiting application.')
-            exit = true
-        }
-        else {
-            console.log('Invalid selection.');
-        }
-    }
-}
-
-// const numberToGuess = Math.floor(Math.random() * 10) + 1;
-// let foundCorrectNumber = false;
-
-// while (!foundCorrectNumber) {
-//   let guess = prompt('Guess a number from 1 to 10: ');
-
-//   if (guess == numberToGuess) {
-//     console.log('Congrats, you got it!');
-//     foundCorrectNumber = true;
-//   } 
-//   else {
-//     console.log('Sorry, guess again!');
-//   }
-// }
 
 async function main() {   
     const emailElements = await connection(readLastSent, true)

@@ -103,17 +103,23 @@ function removeReplyThread(body) {
              break
             }
         }
-        
+        console.log(splitText)
         //Remove reply threads characterized by the ">" character on every line, and "<email address> wrote:" on the line before
-     for (let i = 0; i < splitText.length -3; i++) {
-         if (splitText[i].indexOf('> wrote:') > -1 &&
+     
+     // THIS IS WAY TOO PICKY
+     // REPLACE <EMAIL@EMAIL.COM> WITH <somechars>
+     //// get indexOf '<somechars> wrote:'
+     ////// slice on wherever this is and rejoin 
+        for (let i = 0; i < splitText.length -3; i++) {
+         if (splitText[i].indexOf('> wrote:') != -1 &&
              splitText[i + 3].indexOf('>') == 0 ||
              splitText[i + 2].indexOf('>') == 0 &&
              splitText[i + 4].indexOf('>') == 0 &&
              splitText[i + 5].indexOf('Subject: ') == 0) {
-             splitText = splitText.slice(0, i)
-             cleanBody = splitText.join('\n')
-             break
+                console.log('THIS IS NOT GETTING TRIGGERD')
+                splitText = splitText.slice(0, i)
+                cleanBody = splitText.join('\n')
+                break
          }
         }
         return cleanBody
@@ -174,19 +180,19 @@ async function parseHeader(header) {
             },
         } 
     }
-    // const headObject = {}
-
+    // Message-ID and Reply-To-ID get messed up in Outlook. This identifies 
+    // the weird formatting and fixes it
     for (let i = 0; i < splitHead.length; i++) {
-        //Message-ID and Reply-To-ID get messed up in Outlook. This identifies 
-        //the weird formatting and fixes it
-        if (splitHead[i] == 'Message-ID:') {
-            splitHead[i] = splitHead[i] + splitHead[i + 1]
-            splitHead[i + 2] = splitHead[i + 2] + splitHead[i + 3]
-            let forDeletion = [splitHead[i + 1], splitHead[i + 3]]
-            splitHead = splitHead.filter(item => !forDeletion.includes(item))
+        let ids = ['Message-ID:', 'In-Reply-To:']
+        for (let j = 0; j < 2; j++) {
+            if (splitHead[i] == ids[j]) {
+                splitHead[i] = splitHead[i] + splitHead[i + 1]
+                let forDeletion = splitHead[i + 1]
+                splitHead = splitHead.filter(item => !forDeletion.includes(item))
+            }
         }
-        //Detects header element based on first char in array
-        //Selects parsing function based on char and assigns parsed text to new array
+        // Detects header element based on first char in array
+        // Selects parsing function based on char and assigns parsed text to new array
         for (let char = 0; char < headerObject.charOptions.length; char++) {
             if (splitHead[i][0] == headerObject.charOptions[char]) {
                 func = headerObject.charCleaners[ headerObject.charOptions[char] ]    
@@ -210,16 +216,17 @@ async function parseBody(body) {
     cleanBody = await decode64(body)
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
+    cleanBody = await convertHtml(cleanBody)
     if (cleanBody.indexOf('Content-Disposition:') != -1 || 
     cleanBody.indexOf('Content-Type: multipart/alternative') != -1 || 
     cleanBody.length > 2500) {
         throw new Error('This email could not be read. It contains an attachment, image or is super duper long. Review parsedBody function.')
     }
-    cleanBody = await convertHtml(cleanBody)
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)    
+    // console.log('cleanbody', cleanBody)
     return cleanBody
 }
 

@@ -20,7 +20,7 @@ async function emailFetch(imap, emailId = 0, box) {
         await new Promise(resolve => {
             imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
                 if (result == '') {
-                console.log('No email with that ID exists within the Inbox folder.', err)
+                console.log(`No email with that ID exists within the ${box.name} folder.`, err)
                 return resolve(1)
             }
             fetchedMessage = imap.fetch(result,
