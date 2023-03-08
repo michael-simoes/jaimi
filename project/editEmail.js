@@ -200,6 +200,7 @@ async function parseHeader(header) {
 
 async function parseBody(body, header) {
     cleanBody = await convertHtml(body)
+    console.log('BODY:', body.split(' '))
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
     if (cleanBody.indexOf('Content-Disposition:') != -1 || cleanBody.length > 1500) {

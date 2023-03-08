@@ -1,6 +1,6 @@
 console.log('app.js has run');
-require('dotenv').config({ path: '../.env.gmail' })
-// require('dotenv').config({ path: '../.env.other' })
+// require('dotenv').config({ path: '../.env.gmail' })
+require('dotenv').config({ path: '../.env.other' })
 const { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived } = require('./readMail.js');
 const promptComponents = require('./prompts.js');                     
 const { parseBody, parseHeader } = require('./editEmail.js');
@@ -15,21 +15,42 @@ const mailbox = process.env.MAILBOX
 
 const eventEmitter = new EventEmitter();
 
-eventEmitter.on('chase', () => {
+// try with native readline
+// make the console request for input from user a promise?
+// eventEmitter.on('chase', async () => {
+//     console.log('chase sequence started');
+//     await main()
+//     let selection = instruction('>> ');
+//         selection = selection.toLowerCase()
+//         if (selection == 'chase') {
+//             console.log('Chase sequence initiated.');
+//             eventEmitter.emit('chase');            
+//         } 
+// });
+
+const readline = require('readline').createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+  
+  eventEmitter.on('chase', async () => {  
     console.log('chase sequence started');
     main()
-    let selection = instruction('>> ');
-        selection = selection.toLowerCase()
-        if (selection == 'chase') {
-            console.log('Chase sequence initiated.');
-            eventEmitter.emit('chase');            
-        } 
-});
-  
-// eventEmitter.emit('chase');
+    readline.question('Who are you?', (input) => {
+        if (input == 'hello') {
+        console.log(`Hey there ${input}!`);
+        eventEmitter.emit('chase');
+    }
+  })
+})
 
-const express = require('express')
-const app = express()
+
+eventEmitter.emit('chase');
+
+
+
+// const express = require('express')
+// const app = express()
 
 // // respond with "hello world" when a GET request is made to the homepage
 // app.get('/asdf', (req, res) => {
@@ -84,7 +105,12 @@ async function main() {
     console.log(process.env.USER)
     const emailElements = await connection(readLastSent, true)
     console.log(emailElements.header)
-    promptComponents.firstSent += await parseBody(emailElements.body) 
+    try {
+        promptComponents.firstSent += await parseBody(emailElements.body) 
+    } catch (e) {
+        console.log('Error, body of email could not be parsed', e)
+        return
+    }
     const sentEmailHeader = await parseHeader(emailElements.header)
     //If there's no email that we're replying to, initiate the follow-up just using the first email
     if (!sentEmailHeader[4]) {
@@ -117,7 +143,7 @@ async function countdown(emailHeaders, promptComponents) {
         await emailSender(to, cc, subject, aiFollowUp, messageId)
         await imapEnd(imap)                           /// can't terminate the connection here obviously
         countdown(emailHeaders, promptComponents)                         /// re runs until response
-    }, 3000)
+    }, 30000)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     // console.log(timeoutId)
