@@ -104,7 +104,8 @@ async function test() {
 async function main() {   
     console.log(process.env.USER)
     const emailElements = await connection(readLastSent, true)
-    console.log(emailElements.header)
+    // console.log(emailElements.body)
+    // console.log(emailElements.header)
     try {
         promptComponents.firstSent += await parseBody(emailElements.body) 
     } catch (e) {
