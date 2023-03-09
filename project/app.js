@@ -6,10 +6,9 @@ const promptComponents = require('./prompts.js');
 const { parseBody, parseHeader } = require('./editEmail.js');
 const { chase, completion } = require('./generate.js')
 const { emailSender } = require('./send.js')
-const instruction = require('prompt-sync')({sigint: true});
 const EventEmitter = require('events');
 
-
+const chaseSequences = {timeoutId: {}}
 const mailbox = process.env.MAILBOX
 const eventEmitter = new EventEmitter();
 const readline = require('readline').createInterface({
@@ -20,12 +19,12 @@ const readline = require('readline').createInterface({
 eventEmitter.on('chase', async () => {  
     console.log('chase sequence started');
     main()
-    readline.question('Who are you?', (input) => {
-        if (input == 'hello') {
-            console.log(`Hey there ${input}!`);
+    readline.question('Input command: \n', (input) => {
+        if (input == 'chase') {
+            console.log(`chase sequence initiated!`);
             eventEmitter.emit('chase');
-    }
-  })
+        }
+    })
 })
 
 eventEmitter.emit('chase');
@@ -39,10 +38,13 @@ async function main() {
         return
     }
     const sentEmailHeader = await parseHeader(emailElements.header)
-    //If there's no email that we're replying to, initiate the follow-up just using the first email
+    console.log('sent email header', sentEmailHeader)
+    
+    // TO DO!
+    // If there's no email that we're replying to, initiate the follow-up just using the first email
     if (!sentEmailHeader[4]) {
         console.log('No reply-to address')
-        return                          ///Go to generate --> send
+        return                          /// Go to generate --> send
     }
 
     let repliedToElements = await connection(readEmail, false, 'INBOX', sentEmailHeader[4])
@@ -50,17 +52,11 @@ async function main() {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
     }
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
-    
-    // TO DO:
-    // After sending email, create cancellable timeout event set for like 2 minutes of no reply from that email.
-    // Cancel timeout with ID: EMAIL based on if imap.('mail') has detected an email from original replyTo
 
-    // Need to cancel the latest timer that is still LIVE. I'm cancelling the first one after it expired already
     await countdown(sentEmailHeader, promptComponents);
 }
 
 async function countdown(emailHeaders, promptComponents) {
-    console.log('countdown init')
     let imap = await imapInit()
     let to = emailHeaders[0], cc = emailHeaders[1], subject = emailHeaders[2], messageId = emailHeaders[3];
     let firstSent = promptComponents.firstSent, respondingTo = promptComponents.respondingTo;
@@ -68,37 +64,45 @@ async function countdown(emailHeaders, promptComponents) {
         const prompt = await chase(firstSent, respondingTo)
         const aiFollowUp = await completion(prompt)
         await emailSender(to, cc, subject, aiFollowUp, messageId)
-        await imapEnd(imap)                           /// can't terminate the connection here obviously
-        countdown(emailHeaders, promptComponents)                         /// re runs until response
+        await imapEnd(imap)                           
+        countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
     }, 30000)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
-    // console.log(timeoutId)
     await monitor(imap, mailbox, 'INBOX', to, timeoutId)
+    chaseSequences.timeoutId = emailHeaders[0]
+    console.log('chasesequencesssssssssssssssssssssssssssssss', chaseSequences, '\n')
+    readline.question('Input command: \n', (input) => {
+        if (input == timeoutId) {
+            clearTimeout(timeoutId)
+            console.log(`chase sequence cancelled`)
+        }
+    })
+    // Save timeoutId to object chaseSequences
+    //// Remove timeoutId from that object if necessary
+    // Remove 
 }
 
-/// NOT CANCELLING YAHOO EMAILS PROPERLY. DETECTING THEM, BUT NOT CANCELLING TIMEOUT!
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {   
-    console.log('monitor init')       /// this becomes second main function. wrap everything in it 
+    console.log('monitor init')    
     imap.on('ready', () => {
-    openFolder(folder, imap, emailClient, (error, box) => {
-    let result = ''
-    let header = ''
-        imap.on('mail', async (num) => {                            /// Don't want to restart a countdown everytime new mail comes in
-        result = await connection(readLastReceived, true)
-        header = await parseHeader(result.header)
-        console.log(`${targetEmail} =?= ${header[5]}`)
-        if (header[5] == targetEmail) {
-            console.log(timeoutId)
-            clearTimeout(timeoutId)
-            console.log('countdown aborted')
-            await imapEnd(imap)
-        }
-        // console.log(header[0])
-        console.log('MAIL RECEIVED!')
+        openFolder(folder, imap, emailClient, (error, box) => {
+        let result = ''
+        let header = ''
+            imap.on('mail', async (num) => {                  
+                result = await connection(readLastReceived, true)
+                header = await parseHeader(result.header)
+                console.log(`${targetEmail} =?= ${header[5]}`)
+                if (header[5] == targetEmail) {
+                    console.log(timeoutId)
+                    clearTimeout(timeoutId)
+                    console.log('countdown aborted')
+                    await imapEnd(imap)
+                }
+                console.log('MAIL RECEIVED!')
+            })
         })
     })
-})
 }
 
 async function connection(func, latest, folder, messageId) {

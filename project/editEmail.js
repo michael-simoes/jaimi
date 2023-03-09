@@ -4,8 +4,6 @@ const { convert } = require('html-to-text');
 function getSentTime() {
     /// get sent time of email, send additional email after 72 hours if no reply received
     //IF jaimi sends the email, then we don't have to look for it in the inbox. This is much easier.
-
-
 }
 
 function checkForReply() {
@@ -15,8 +13,7 @@ function checkForReply() {
 }
 
 
-
-function convertHtml(body) {                      //////pretty sure this Promise is not doing anything
+function convertHtml(body) {                 
     return new Promise((resolve, reject) => {      
         const plainBody = convert(body, {
         wordwrap: null,
@@ -63,20 +60,7 @@ function cleanString(body) {
 
 //Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
 //There are several cases added to account for when Content-Transfer has additional characters attached
-////NOTE: There may be a far better way to do this using indexOf('charset=', 20) and slicing the body string...
-////see the third to last line of the function
 function removeExtraData(body) {
-    // let splitArray = ''
-    // splitText = body.split(' ')
-    // const contentTransferEncodings = ['Content-Transfer-Encoding:', 'Content-Transfer-Encoding: ', 
-    // ' Content-Transfer-Encoding:', '\nContent-Transfer-Encoding:', 'Content-Transfer-Encoding:\n'] 
-    
-    // for (let i = 0; i < contentTransferEncodings.length; i++) {
-    //     if (splitText.indexOf(contentTransferEncodings[i]) != -1) {
-    //         splitArray = splitText.indexOf(contentTransferEncodings[i])
-    //         body = splitText.slice(splitArray + 1).join(' ').slice(17) 
-    //     }
-    // }
     if (body.indexOf('charset=') == -1) {
         return body
     }
@@ -94,7 +78,7 @@ function removeReplyThread(body) {
      
     // Replace the '<email@email.com>' that precedes reply threads if there is one
     cleanBody = cleanBody.replace(/<(.*)> wrote:/g, '<RMVBEYOND>')    
-    
+
      //Remove reply threads that are not indented but have a "from, sent, to" header attached 
     let splitText = cleanBody.split('\n')
     for (let i = 0; i < splitText.length -3; i++) {
@@ -141,7 +125,7 @@ function checkForMarketing(body) {
 async function parseHeader(header) {
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
-    // console.log(splitHead)
+    console.log(splitHead)
     let to = '', cc = '', subject = '', messageId = '', replyToId = '', from = '';
     let func = ''
     const headerObject = { 
@@ -149,7 +133,7 @@ async function parseHeader(header) {
        headerElements: [to, cc, subject, messageId, replyToId, from], 
        charCleaners: { 
             'T': (param) => { 
-                return param.replaceAll(/(.*)</g, '').replaceAll('>', '') 
+                return param.replaceAll(/(.*)</g, '').replaceAll('>', '').replaceAll('To:', '').replaceAll(' ', '').replaceAll(';', '')
             },
             'C': (param) => { 
                 return param.replaceAll(/(.*)</g, '').replaceAll('>', '') 
@@ -165,7 +149,7 @@ async function parseHeader(header) {
                 return param.replace(/(.*)</g, '').replace('>', '') 
             },
             'F': (param) => { 
-                return param.replaceAll(/(.*)</g, '').replaceAll('>', '')
+                return param.replaceAll(/(.*)</g, '').replaceAll('>', '').replaceAll(' ', '').replaceAll('From:', '')
             },
         } 
     }
@@ -203,9 +187,10 @@ async function decode64(body) {
 
 async function parseBody(body) {
     cleanBody = await decode64(body)
+
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
-    cleanBody = await convertHtml(cleanBody)
+    cleanBody = await convertHtml(cleanBody) // This has to run before if statement or too many false positives
     if (cleanBody.indexOf('Content-Disposition:') != -1 || 
     cleanBody.indexOf('Content-Type: multipart/alternative') != -1 || 
     cleanBody.length > 2500) {
@@ -218,6 +203,5 @@ async function parseBody(body) {
     console.log('cleanbody', cleanBody)
     return cleanBody
 }
-
 
 module.exports = { parseBody, parseHeader }
