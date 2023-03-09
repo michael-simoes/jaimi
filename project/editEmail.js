@@ -125,7 +125,6 @@ function checkForMarketing(body) {
 async function parseHeader(header) {
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
-    console.log(splitHead)
     let to = '', cc = '', subject = '', messageId = '', replyToId = '', from = '';
     let func = ''
     const headerObject = { 

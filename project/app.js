@@ -8,7 +8,7 @@ const { chase, completion } = require('./generate.js')
 const { emailSender } = require('./send.js')
 const EventEmitter = require('events');
 
-const chaseSequences = {timeoutId: {}}
+const chaseSequences = {}
 const mailbox = process.env.MAILBOX
 const eventEmitter = new EventEmitter();
 const readline = require('readline').createInterface({
@@ -16,18 +16,29 @@ const readline = require('readline').createInterface({
     output: process.stdout
   });
   
-eventEmitter.on('chase', async () => {  
-    console.log('chase sequence started');
-    main()
-    readline.question('Input command: \n', (input) => {
+console.log(`Options:
+chase - start followup sequence
+email - cancel followups for that email \n`)
+
+eventEmitter.on('input', async () => {
+    // console.log('CHASE SEQUENCES', chaseSequences, '\n')  
+    readline.question('\n>> ', (input) => {
         if (input == 'chase') {
-            console.log(`chase sequence initiated!`);
-            eventEmitter.emit('chase');
+            main()
+            console.log('chase init')
+            eventEmitter.emit('input');
+        }
+
+        if (Object.keys(chaseSequences).includes(input)) {
+            clearTimeout(chaseSequences[input])
+            console.log('timer cleared')
+            eventEmitter.emit('input')
         }
     })
+    
 })
 
-eventEmitter.emit('chase');
+eventEmitter.emit('input');
 
 async function main() {   
     const emailElements = await connection(readLastSent, true)
@@ -38,7 +49,6 @@ async function main() {
         return
     }
     const sentEmailHeader = await parseHeader(emailElements.header)
-    console.log('sent email header', sentEmailHeader)
     
     // TO DO!
     // If there's no email that we're replying to, initiate the follow-up just using the first email
@@ -66,18 +76,17 @@ async function countdown(emailHeaders, promptComponents) {
         await emailSender(to, cc, subject, aiFollowUp, messageId)
         await imapEnd(imap)                           
         countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
-    }, 30000)
+    }, 10000)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     await monitor(imap, mailbox, 'INBOX', to, timeoutId)
-    chaseSequences.timeoutId = emailHeaders[0]
-    console.log('chasesequencesssssssssssssssssssssssssssssss', chaseSequences, '\n')
-    readline.question('Input command: \n', (input) => {
-        if (input == timeoutId) {
-            clearTimeout(timeoutId)
-            console.log(`chase sequence cancelled`)
-        }
-    })
+    chaseSequences[emailHeaders[0]] = timeoutId
+    // readline.question('Input command #2: \n', (input) => {
+    //     if (input == 'hi') {
+    //         clearTimeout(chaseSequences[emailHeaders[0]])
+    //         console.log(`chase sequence cancelled`)
+    //     }
+    // })
     // Save timeoutId to object chaseSequences
     //// Remove timeoutId from that object if necessary
     // Remove 
