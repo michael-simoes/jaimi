@@ -88,7 +88,6 @@ async function readEmail(imap, emailClient, folder, emailId) {
                     }) 
                 })
                 msg.once('end', () => {
-                    let buff = Buffer.from(body, 'base64')
                     body = body.toString('utf8')
                     header = header.toString('utf8')                    
                     resolve(body, header)

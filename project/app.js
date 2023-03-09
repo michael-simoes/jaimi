@@ -6,6 +6,7 @@ const promptComponents = require('./prompts.js');
 const { parseBody, parseHeader } = require('./editEmail.js');
 const { chase, completion } = require('./generate.js')
 const { emailSender } = require('./send.js')
+const { timer } = require('./time.js')
 const EventEmitter = require('events');
 
 const chaseSequences = {}
@@ -33,12 +34,20 @@ eventEmitter.on('input', async () => {
             console.log('timer cleared')
             eventEmitter.emit('input')
         }
-        if (input == 'emails') {
-            console.log(Object.keys(chaseSequences), Object.values(chaseSequences))
+        if (input == 'outgoing') {
+            /// USE THIS
+            console.log('emails request')
+            for (const [key, value] of Object.entries(chaseSequences)) {
+                console.log(`${key}: ${value.nextEmail}`);
+              }
+
+            // console.log(Object.keys(chaseSequences), Object.values(chaseSequences))
             eventEmitter.emit('input')
-        }
+        } else {             
+            console.log('try again')
+            eventEmitter.emit('input')
+          }
     })
-    
 })
 
 eventEmitter.emit('input');
@@ -70,6 +79,7 @@ async function main() {
 }
 
 async function countdown(emailHeaders, promptComponents) {
+    let { timerLength, sendAt } = await timer()
     let imap = await imapInit()
     let to = emailHeaders[0], cc = emailHeaders[1], subject = emailHeaders[2], messageId = emailHeaders[3];
     let firstSent = promptComponents.firstSent, respondingTo = promptComponents.respondingTo;
@@ -79,12 +89,13 @@ async function countdown(emailHeaders, promptComponents) {
         await emailSender(to, cc, subject, aiFollowUp, messageId)
         await imapEnd(imap)                           
         countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
-    }, 40000)
+    }, timerLength)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     await monitor(imap, mailbox, 'INBOX', to, timeoutId)
+
     chaseSequences[emailHeaders[0]] = timeoutId
-    chaseSequences[emailHeaders[0]].alpha = 1
+    chaseSequences[emailHeaders[0]].nextEmail = sendAt
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {   
