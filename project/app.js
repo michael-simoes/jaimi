@@ -28,10 +28,13 @@ eventEmitter.on('input', async () => {
             console.log('chase init')
             eventEmitter.emit('input');
         }
-
         if (Object.keys(chaseSequences).includes(input)) {
             clearTimeout(chaseSequences[input])
             console.log('timer cleared')
+            eventEmitter.emit('input')
+        }
+        if (input == 'emails') {
+            console.log(Object.keys(chaseSequences), Object.values(chaseSequences))
             eventEmitter.emit('input')
         }
     })
@@ -76,20 +79,12 @@ async function countdown(emailHeaders, promptComponents) {
         await emailSender(to, cc, subject, aiFollowUp, messageId)
         await imapEnd(imap)                           
         countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
-    }, 10000)
+    }, 40000)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     await monitor(imap, mailbox, 'INBOX', to, timeoutId)
     chaseSequences[emailHeaders[0]] = timeoutId
-    // readline.question('Input command #2: \n', (input) => {
-    //     if (input == 'hi') {
-    //         clearTimeout(chaseSequences[emailHeaders[0]])
-    //         console.log(`chase sequence cancelled`)
-    //     }
-    // })
-    // Save timeoutId to object chaseSequences
-    //// Remove timeoutId from that object if necessary
-    // Remove 
+    chaseSequences[emailHeaders[0]].alpha = 1
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {   
