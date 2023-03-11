@@ -1,5 +1,3 @@
-console.log('send.js has run')
-
 const nodemailer = require('nodemailer')
 
 const smtpConfig = {                      
@@ -22,9 +20,7 @@ const smtpConfig = {
   
 
 async function emailSender(to, cc, subject, text, messageId) {
-  console.log(to, subject, text)
-  // return
-                                 
+  // return                              
   transporter.sendMail({ 
     from: process.env.USER,
     to: to,
@@ -33,6 +29,7 @@ async function emailSender(to, cc, subject, text, messageId) {
     text: text,
     inReplyTo: messageId,
   })
+  return `\nEmail sent to ${to}. Preview: "${text.slice(0, 30)}..."\n`
 }
 
 module.exports = { emailSender }

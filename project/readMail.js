@@ -20,7 +20,6 @@ async function emailFetch(imap, emailId = 0, box) {
         await new Promise(resolve => {
             imap.search([['HEADER', 'MESSAGE-ID', emailId]], (err, result) => {
                 if (result == '') {
-                console.log(`No email with that ID exists within the ${box.name} folder.`, err)
                 return resolve(1)
             }
             fetchedMessage = imap.fetch(result,
@@ -105,24 +104,27 @@ async function readEmail(imap, emailClient, folder, emailId) {
 async function imapInit() {
     let imap = new Imap({
         user: process.env.USER,
-        password: process.env.PASS,
+        password: process.env.PdASS,                  /// THIS WAS ADDED TO MAKE US ERROR FOR TESTING!!! 
         host: process.env.IMAP_DOMAIN,
         port: 993,
         tls: true,
         tlsOptions: { rejectUnauthorized: false }
     });
-    imap.once('error', (err) => {
-        console.log(err);
-    });
+    const error = await new Promise(resolve => {
+        imap.once('error', (err) => {
+            console.log(err);
+        })
+        return resolve(false)
+    })
+    if (!error) {     
+        return false
+    }
     imap.connect();  
     return imap
 }
 
 async function imapEnd(imap) {
     imap.end()
-    imap.on('end', () => {
-        console.log('Connection ended');
-    });
 }
   
 module.exports = { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived }

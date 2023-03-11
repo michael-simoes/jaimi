@@ -199,7 +199,6 @@ async function parseBody(body) {
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)    
-    console.log('cleanbody', cleanBody)
     return cleanBody
 }
 
