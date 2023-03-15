@@ -21,10 +21,10 @@ const smtpConfig = {
 
 async function emailSender(to, cc, subject, text, messageId) {
   // return                              
-  transporter.sendMail({                                           //////// this doesn't throw an error, just returns nothing
+  transporter.sendMail({                                         
     from: process.env.USER,
     to: to,
-    cc: cc,
+    cc: [ process.env.USER, cc ], // support for 1 cc'd person + yourself so you see the emails coming in
     subject: subject,
     text: text,
     inReplyTo: messageId,

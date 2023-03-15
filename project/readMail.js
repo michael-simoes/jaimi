@@ -73,7 +73,7 @@ async function readEmail(imap, emailClient, folder, emailId) {
             }
             //If there is no email matching search criteria, readEmail() returns FALSE
             if (fetchedMessage == null) {
-                return resolve(false)
+                return resolve(error = 'No email found.')
             }         
             fetchedMessage.on('message', (msg) => {   
                 let count = 0

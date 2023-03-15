@@ -192,7 +192,7 @@ async function parseBody(body) {
     if (cleanBody.indexOf('Content-Disposition:') != -1 || 
     cleanBody.indexOf('Content-Type: multipart/alternative') != -1 || 
     cleanBody.length > 2500) {                 /// We cannot have this throw an error! Would be so bad
-        throw new Error('This email could not be read. It contains an attachment, image or is super duper long. Review parsedBody function.')
+        return false
     }
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)

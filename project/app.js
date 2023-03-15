@@ -3,7 +3,7 @@ require('dotenv').config({ path: '../.env.other' })
 const { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived } = require('./readMail.js');
 const promptComponents = require('./prompts.js');                     
 const { parseBody, parseHeader } = require('./editEmail.js');
-const { chase, completion } = require('./generate.js')
+const { generatePrompt, completion } = require('./generate.js')
 const { emailSender } = require('./send.js')
 const { timer } = require('./time.js')
 const EventEmitter = require('events');
@@ -74,19 +74,23 @@ async function main() {
         console.log('Please try again.', emailElements.error)                            // Check for FALSE connection each time
         return { target: false, preview: false }
     }
-    const firstSent = await parseBody(emailElements.body) 
+    const firstSent = await parseBody(emailElements.body)
+    if (!firstSent) {
+        console.log('\nEmail could not be read, it contains an attachment, image or is super duper long. Review parsedBody function.\n')
+        return { target: false, preview: false }
+    }
     promptComponents.firstSent += firstSent
     const sentEmailHeader = await parseHeader(emailElements.header)
     
     // TO DO!
     // If there's no email that we're replying to, initiate the follow-up just using the first email
     if (!sentEmailHeader[4]) {
-        // console.log('No reply-to address')
-        return                          /// Go to generate --> send
+        bar1.update(100)
+        await countdown(sentEmailHeader, promptComponents)
+        return { target: sentEmailHeader[0], preview: firstSent }
     }
-
     let repliedToElements = await connection(readEmail, false, 'INBOX', sentEmailHeader[4])
-    if (!repliedToElements) {
+    if (repliedToElements.error) {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
         if (repliedToElements.error) {
             console.log('Please try again.', repliedToElements.error)
@@ -95,7 +99,10 @@ async function main() {
     }
     bar1.update(100)   
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
-    
+    if (!promptComponents.respondingTo) {
+        console.log('\nEmail could not be read, it contains an attachment, image or is super duper long. Review parsedBody function.\n')
+        return { target: false, preview: false }
+    }
     await countdown(sentEmailHeader, promptComponents)
     return { target: sentEmailHeader[0], preview: firstSent }
 }
@@ -109,10 +116,10 @@ async function countdown(emailHeaders, promptComponents) {
         if (timerLength <= 1000) {
             new Error('\nThe email timer length is less than 1 second. Something has gone wrong.\n')
         }
-        console.log('\nTIMER IS UP!\n')
-        const prompt = await chase(firstSent, respondingTo)
+        const prompt = await generatePrompt(firstSent, respondingTo)
         const aiFollowUp = await completion(prompt)
-        const consolePreview = await emailSender(to, cc, subject, aiFollowUp, messageId)
+        const message = aiFollowUp + promptComponents.signature
+        const consolePreview = await emailSender(to, cc, subject, message, messageId)
         console.log(consolePreview)
         await imapEnd(imap)      
         countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
@@ -128,6 +135,9 @@ async function countdown(emailHeaders, promptComponents) {
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {       
     const error = await new Promise(resolve => { 
         imap.on('error', async (err) => {
+            if (err.code == 'ECONNRESET') { 
+                return 
+            }
             console.log(`\nMonitoring failed for ${targetEmail}. Chase has been terminated.\n${err}\n`)
             clearTimeout(timeoutId)
             delete chaseSequences[targetEmail]

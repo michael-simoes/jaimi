@@ -22,10 +22,11 @@ async function completion(prompt) {
 }
 
 
-async function chase(firstSent, replyingTo) {
-    return prompts.whoami + prompts.followUpCommand + replyingTo + firstSent + prompts.followUpExamples   
+async function generatePrompt(firstSent, replyingToBody) {
+    if (!replyingToBody) {
+      return prompts.whoami + prompts.followUpCommand + firstSent + prompts.followUpExamples     
+    }
+    return prompts.whoami + prompts.followUpCommand + '\nEmail to respond to:' + replyingToBody + firstSent + prompts.followUpExamples   
   };
 
-
-
-module.exports = { chase, completion }
+module.exports = { generatePrompt, completion }
