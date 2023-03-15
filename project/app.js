@@ -8,8 +8,10 @@ const { emailSender } = require('./send.js')
 const { timer } = require('./time.js')
 const EventEmitter = require('events');
 const { exit } = require('process');
+const cliProgress = require('cli-progress');
 const { firstSent } = require('./prompts.js');
 
+const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
 const chaseSequences = {}
 const mailbox = process.env.MAILBOX
 const eventEmitter = new EventEmitter();
@@ -27,7 +29,8 @@ console.log(instructions)
 eventEmitter.on('input', async () => {
     readline.question('\n>> ', async (input) => {
         if (input == 'chase') {
-            console.log('Loading...')
+            console.log('Calling Jaimi...')
+            bar1.start(100, 2)
             const { target, preview } = await main()
             if (!target) {
                 console.log('An error has occured. Please try again.')
@@ -63,8 +66,10 @@ eventEmitter.on('input', async () => {
 
 eventEmitter.emit('input');
 
-async function main() {   
-    const emailElements = await connection(readLastSent, true)      
+async function main() {
+    bar1.update(28)   
+    const emailElements = await connection(readLastSent, true)
+    bar1.update(88)      
     if (emailElements.error) {        
         console.log('Please try again.', emailElements.error)                            // Check for FALSE connection each time
         return { target: false, preview: false }
@@ -76,7 +81,7 @@ async function main() {
     // TO DO!
     // If there's no email that we're replying to, initiate the follow-up just using the first email
     if (!sentEmailHeader[4]) {
-        console.log('No reply-to address')
+        // console.log('No reply-to address')
         return                          /// Go to generate --> send
     }
 
@@ -88,6 +93,7 @@ async function main() {
             return { target: false, preview: false }
         }
     }
+    bar1.update(100)   
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
     
     await countdown(sentEmailHeader, promptComponents)
