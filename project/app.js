@@ -28,13 +28,13 @@ eventEmitter.on('input', async () => {
     readline.question('\n>> ', async (input) => {
         if (input == 'chase') {
             console.log('Loading...')
-            const content = []                      /// PUT THIS BACK TO { TARGET, PREVIEW }???
-            try {
-                content = await main()
-            } catch(e) {
-                eventEmitter.emit('input')
-            }        /// GET RID OF THIS STUFF
-            console.log(`\nChasing ${content[0]}. Initial email: "${content[1]}..."`)
+            const { target, preview } = await main()
+            if (!target) {
+                console.log('An error has occured. Please try again.')
+                eventEmitter.emit('input');
+                return
+            }
+            console.log(`\nChasing ${target}. Initial email: "${preview}..."\n`)
             eventEmitter.emit('input');
         }
         else if (Object.keys(chaseSequences).includes(input)) {
@@ -64,14 +64,12 @@ eventEmitter.on('input', async () => {
 eventEmitter.emit('input');
 
 async function main() {   
-    const emailElements = await connection(readLastSent, true)           // TRY CATCH ANY INSTANCE OF A CONNECTION
-    let firstSent = ''
-    try {
-        firstSent = await parseBody(emailElements.body) 
-    } catch (e) {
-        console.log('Error, failed to parse email body. ', e)
-        return
+    const emailElements = await connection(readLastSent, true)      
+    if (emailElements.error) {        
+        console.log('ERROR. Please try again:', emailElements.error)                            // Check for FALSE connection each time
+        return { target: false, preview: false }
     }
+    const firstSent = await parseBody(emailElements.body) 
     promptComponents.firstSent += firstSent
     const sentEmailHeader = await parseHeader(emailElements.header)
     
@@ -85,9 +83,13 @@ async function main() {
     let repliedToElements = await connection(readEmail, false, 'INBOX', sentEmailHeader[4])
     if (!repliedToElements) {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
+        if (repliedToElements.error) {
+            console.log('ERROR. Please try again:', repliedToElements.error)
+            return { target: false, preview: false }
+        }
     }
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
-
+    
     await countdown(sentEmailHeader, promptComponents)
     return { target: sentEmailHeader[0], preview: firstSent }
 }
@@ -99,51 +101,64 @@ async function countdown(emailHeaders, promptComponents) {
     let firstSent = promptComponents.firstSent, respondingTo = promptComponents.respondingTo;
     const timeoutId = setTimeout(async () => {
         if (timerLength <= 1000) {
-            new Error('\nThe email timer length is less than 1 second. Something has gone worng.\n')
+            new Error('\nThe email timer length is less than 1 second. Something has gone wrong.\n')
         }
+        console.log('location 0')
         const prompt = await chase(firstSent, respondingTo)
         const aiFollowUp = await completion(prompt)
-        const consolePreview = await emailSender(to, cc, subject, aiFollowUp, messageId)
-        await imapEnd(imap)                           
+        let consolePreview = ''
+        consolePreview = await emailSender(to, cc, subject, aiFollowUp, messageId)        
+        console.log('location 1')
+        await imapEnd(imap)      
+        console.log('location 2')                     
         countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
-        console.log(consolePreview)
+        console.log('location 3')
+        // console.log(consolePreview)
         eventEmitter.emit('input')
     }, timerLength)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
-    await monitor(imap, mailbox, 'INBOX', to, timeoutId)
-
+    console.log('location 4')
+    monitor(imap, mailbox, 'INBOX', to, timeoutId)
+    console.log('location 5')
     chaseSequences[emailHeaders[0]] = timeoutId
     chaseSequences[emailHeaders[0]].nextEmail = sendAt
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {       
-    imap.on('ready', () => {
-        openFolder(folder, imap, emailClient, (error, box) => {
-        let result = ''
-        let header = ''
-            imap.on('mail', async (num) => {                  
-                result = await connection(readLastReceived, true)
-                header = await parseHeader(result.header)
-                if (header[5] == targetEmail) {
-                    clearTimeout(timeoutId)
-                    console.log(`\nChase terminated for: ${targetEmail}\n`)
-                    delete chaseSequences[targetEmail]
-                    await imapEnd(imap)
-                    eventEmitter.emit('input')
-                }
-            })
+    const error = await new Promise(resolve => { 
+        imap.on('error', (err) => {
+            console.log(`\nMailbox monitoring failed to be established for ${targetEmail}\n`)
+            clearTimeout(timeoutId)
+            delete chaseSequences[targetEmail]
+            return resolve(true)
         })
     })
+        
+        console.log(error, '\nerror\n')
+        // eventEmitter.emit('input')
+    //     imap.on('ready', () => {
+    //     console.log(true)
+    //     openFolder(folder, imap, emailClient, (error, box) => {
+    //     let result = ''
+    //     let header = ''
+    //         imap.on('mail', async (num) => {                  
+    //             result = await connection(readLastReceived, true)
+    //             header = await parseHeader(result.header)
+    //             if (header[5] == targetEmail) {
+    //                 clearTimeout(timeoutId)
+    //                 console.log(`\nChase terminated for: ${targetEmail}\n`)
+    //                 delete chaseSequences[targetEmail]
+    //                 await imapEnd(imap)
+    //                 eventEmitter.emit('input')
+    //             }
+    //         })
+    //     })
+    // })
 }
 
-
 async function connection(func, latest, folder, messageId) {
-    const imap = await imapInit()
-    if (!imap) {
-        console.log('IMAP connection has failed. Please try again.')
-        return false
-    }
+    const imap = await imapInit()    
     if (latest) {
         const result = await func(imap, mailbox)
         await imapEnd(imap)

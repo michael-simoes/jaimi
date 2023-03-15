@@ -56,7 +56,11 @@ async function readLastReceived(imap, emailClient) {
 async function readEmail(imap, emailClient, folder, emailId) {
     let body = ''
     let header = ''
+    let error = ''
     await new Promise(resolve => { 
+        imap.on('error', (err) => {
+            return resolve(error = err)
+        })
         imap.on('ready', () => {
             openFolder(folder, imap, emailClient, async (err, box) => {
             if (err) {throw new Error('Something has gone wrong with the openInbox function: ', console.log(err))}
@@ -95,31 +99,19 @@ async function readEmail(imap, emailClient, folder, emailId) {
             
         })})
     })
-    if (!body || !header) {
-        return false
-    }
-    return { body, header }
+    return { body, header, error }
 }
 
 async function imapInit() {
     let imap = new Imap({
         user: process.env.USER,
-        password: process.env.PdASS,                  /// THIS WAS ADDED TO MAKE US ERROR FOR TESTING!!! 
+        password: process.env.PASS,                  /// THIS WAS ADDED TO MAKE US ERROR FOR TESTING!!! 
         host: process.env.IMAP_DOMAIN,
         port: 993,
         tls: true,
         tlsOptions: { rejectUnauthorized: false }
-    });
-    const error = await new Promise(resolve => {
-        imap.once('error', (err) => {
-            console.log(err);
-        })
-        return resolve(false)
     })
-    if (!error) {     
-        return false
-    }
-    imap.connect();  
+    imap.connect()  
     return imap
 }
 

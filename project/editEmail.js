@@ -186,13 +186,12 @@ async function decode64(body) {
 
 async function parseBody(body) {
     cleanBody = await decode64(body)
-
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
     cleanBody = await convertHtml(cleanBody) // This has to run before if statement or too many false positives
     if (cleanBody.indexOf('Content-Disposition:') != -1 || 
     cleanBody.indexOf('Content-Type: multipart/alternative') != -1 || 
-    cleanBody.length > 2500) {
+    cleanBody.length > 2500) {                 /// We cannot have this throw an error! Would be so bad
         throw new Error('This email could not be read. It contains an attachment, image or is super duper long. Review parsedBody function.')
     }
     cleanBody = await cleanString(cleanBody)
