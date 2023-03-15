@@ -66,7 +66,7 @@ eventEmitter.emit('input');
 async function main() {   
     const emailElements = await connection(readLastSent, true)      
     if (emailElements.error) {        
-        console.log('ERROR. Please try again:', emailElements.error)                            // Check for FALSE connection each time
+        console.log('Please try again.', emailElements.error)                            // Check for FALSE connection each time
         return { target: false, preview: false }
     }
     const firstSent = await parseBody(emailElements.body) 
@@ -84,7 +84,7 @@ async function main() {
     if (!repliedToElements) {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
         if (repliedToElements.error) {
-            console.log('ERROR. Please try again:', repliedToElements.error)
+            console.log('Please try again.', repliedToElements.error)
             return { target: false, preview: false }
         }
     }
@@ -96,65 +96,57 @@ async function main() {
 
 async function countdown(emailHeaders, promptComponents) {
     let { timerLength, sendAt } = await timer()
-    let imap = await imapInit()                             /// TRY CATCH THIS! ??
+    let imap = await imapInit()                            
     let to = emailHeaders[0], cc = emailHeaders[1], subject = emailHeaders[2], messageId = emailHeaders[3];
     let firstSent = promptComponents.firstSent, respondingTo = promptComponents.respondingTo;
     const timeoutId = setTimeout(async () => {
         if (timerLength <= 1000) {
             new Error('\nThe email timer length is less than 1 second. Something has gone wrong.\n')
         }
-        console.log('location 0')
+        console.log('\nTIMER IS UP!\n')
         const prompt = await chase(firstSent, respondingTo)
         const aiFollowUp = await completion(prompt)
-        let consolePreview = ''
-        consolePreview = await emailSender(to, cc, subject, aiFollowUp, messageId)        
-        console.log('location 1')
+        const consolePreview = await emailSender(to, cc, subject, aiFollowUp, messageId)
+        console.log(consolePreview)
         await imapEnd(imap)      
-        console.log('location 2')                     
         countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
-        console.log('location 3')
-        // console.log(consolePreview)
         eventEmitter.emit('input')
     }, timerLength)
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
-    console.log('location 4')
     monitor(imap, mailbox, 'INBOX', to, timeoutId)
-    console.log('location 5')
     chaseSequences[emailHeaders[0]] = timeoutId
     chaseSequences[emailHeaders[0]].nextEmail = sendAt
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {       
     const error = await new Promise(resolve => { 
-        imap.on('error', (err) => {
-            console.log(`\nMailbox monitoring failed to be established for ${targetEmail}\n`)
+        imap.on('error', async (err) => {
+            console.log(`\nMonitoring failed for ${targetEmail}. Chase has been terminated.\n${err}\n`)
             clearTimeout(timeoutId)
             delete chaseSequences[targetEmail]
+            eventEmitter.emit('input')
+            await imapEnd(imap)
             return resolve(true)
         })
     })
-        
-        console.log(error, '\nerror\n')
-        // eventEmitter.emit('input')
-    //     imap.on('ready', () => {
-    //     console.log(true)
-    //     openFolder(folder, imap, emailClient, (error, box) => {
-    //     let result = ''
-    //     let header = ''
-    //         imap.on('mail', async (num) => {                  
-    //             result = await connection(readLastReceived, true)
-    //             header = await parseHeader(result.header)
-    //             if (header[5] == targetEmail) {
-    //                 clearTimeout(timeoutId)
-    //                 console.log(`\nChase terminated for: ${targetEmail}\n`)
-    //                 delete chaseSequences[targetEmail]
-    //                 await imapEnd(imap)
-    //                 eventEmitter.emit('input')
-    //             }
-    //         })
-    //     })
-    // })
+    imap.on('ready', () => {
+        openFolder(folder, imap, emailClient, (error, box) => {
+        let result = ''
+        let header = ''
+            imap.on('mail', async (num) => {                  
+                result = await connection(readLastReceived, true)
+                header = await parseHeader(result.header)
+                if (header[5] == targetEmail) {
+                    clearTimeout(timeoutId)
+                    console.log(`\nChase terminated for: ${targetEmail}\n`)
+                    delete chaseSequences[targetEmail]
+                    await imapEnd(imap)
+                    eventEmitter.emit('input')
+                }
+            })
+        })
+    })
 }
 
 async function connection(func, latest, folder, messageId) {

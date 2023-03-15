@@ -21,15 +21,14 @@ const smtpConfig = {
 
 async function emailSender(to, cc, subject, text, messageId) {
   // return                              
-  try {transporter.sendMail({                                           //////// this doesn't throw an error, just returns nothing
+  transporter.sendMail({                                           //////// this doesn't throw an error, just returns nothing
     from: process.env.USER,
     to: to,
     cc: cc,
     subject: subject,
     text: text,
     inReplyTo: messageId,
-  })}
-  catch (e) {console.log('\nhi its me an error\n')}
+  })
   return `\nEmail sent to ${to}. Preview: "${text.slice(0, 30)}..."\n`
 }
 
