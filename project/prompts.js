@@ -9,12 +9,12 @@ const fuPrompts = {
     firstSent: 
         '\nMichael: ',
 followUpExamples:
-`\nJaimi: Hi there, Just wanted to follow-up on this. Best, Jaimi (on behalf of Michael)
-Jaimi: Hello, Please let me know about this. Thanks, Jaimi (on behalf of Michael)
+`\nJaimi: Hi there, Just wanted to follow-up on this.\n\nBest,\nJaimi (on behalf of Michael)
+Jaimi: Hello, Please let me know about this.\n\nThanks,\nJaimi (on behalf of Michael)
 Jaimi: `,
 signature: 
-`\nJaimi (AI)
-Virtual Assitant to Michael Simoes`
+`\n\nJaimi the AI
+Virtual Assistant for Michael Simoes`
     }
 
 module.exports = fuPrompts

@@ -1,3 +1,4 @@
+// Select a .env file based on your chosen email and credentials
 // require('dotenv').config({ path: '../.env.gmail' })
 require('dotenv').config({ path: '../.env.other' })
 const { readLastSent, readEmail, imapInit, imapEnd, openFolder, readLastReceived } = require('./readMail.js');
@@ -11,7 +12,7 @@ const { exit } = require('process');
 const cliProgress = require('cli-progress');
 const { firstSent } = require('./prompts.js');
 
-const bar1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_classic);
+const bar1 = new cliProgress.SingleBar({clearOnComplete: true}, cliProgress.Presets.shades_classic);
 const chaseSequences = {}
 const mailbox = process.env.MAILBOX
 const eventEmitter = new EventEmitter();
@@ -37,7 +38,7 @@ eventEmitter.on('input', async () => {
                 eventEmitter.emit('input');
                 return
             }
-            console.log(`\nChasing ${target}. Initial email: "${preview}..."\n`)
+            console.log(`\nInitial email: "${preview.slice(0, 20)}..."\n`)
             eventEmitter.emit('input');
         }
         else if (Object.keys(chaseSequences).includes(input)) {
@@ -47,7 +48,6 @@ eventEmitter.on('input', async () => {
             eventEmitter.emit('input')
         }
         else if (input == 'active') {
-            /// USE THIS
             console.log('\nActive chases:')
             for (const [key, value] of Object.entries(chaseSequences)) {
                 console.log(`${key}: ${value.nextEmail}`);
@@ -63,7 +63,6 @@ eventEmitter.on('input', async () => {
           }
     })
 })
-
 eventEmitter.emit('input');
 
 async function main() {
@@ -71,7 +70,7 @@ async function main() {
     const emailElements = await connection(readLastSent, true)
     bar1.update(88)      
     if (emailElements.error) {        
-        console.log('Please try again.', emailElements.error)                            // Check for FALSE connection each time
+        console.log('Please try again.', emailElements.error)    
         return { target: false, preview: false }
     }
     const firstSent = await parseBody(emailElements.body)
@@ -81,11 +80,9 @@ async function main() {
     }
     promptComponents.firstSent += firstSent
     const sentEmailHeader = await parseHeader(emailElements.header)
-    
-    // TO DO!
-    // If there's no email that we're replying to, initiate the follow-up just using the first email
     if (!sentEmailHeader[4]) {
-        bar1.update(100)
+        bar1.update(99)
+        bar1.stop()
         await countdown(sentEmailHeader, promptComponents)
         return { target: sentEmailHeader[0], preview: firstSent }
     }
@@ -97,12 +94,13 @@ async function main() {
             return { target: false, preview: false }
         }
     }
-    bar1.update(100)   
     promptComponents.respondingTo = await parseBody(repliedToElements.body)
     if (!promptComponents.respondingTo) {
         console.log('\nEmail could not be read, it contains an attachment, image or is super duper long. Review parsedBody function.\n')
         return { target: false, preview: false }
     }
+    bar1.update(99)
+    bar1.stop()
     await countdown(sentEmailHeader, promptComponents)
     return { target: sentEmailHeader[0], preview: firstSent }
 }
@@ -112,13 +110,14 @@ async function countdown(emailHeaders, promptComponents) {
     let imap = await imapInit()                            
     let to = emailHeaders[0], cc = emailHeaders[1], subject = emailHeaders[2], messageId = emailHeaders[3];
     let firstSent = promptComponents.firstSent, respondingTo = promptComponents.respondingTo;
+    const prompt = await generatePrompt(firstSent, respondingTo)
+    const aiFollowUp = await completion(prompt)
+    const message = aiFollowUp + promptComponents.signature
+    
     const timeoutId = setTimeout(async () => {
         if (timerLength <= 1000) {
             new Error('\nThe email timer length is less than 1 second. Something has gone wrong.\n')
         }
-        const prompt = await generatePrompt(firstSent, respondingTo)
-        const aiFollowUp = await completion(prompt)
-        const message = aiFollowUp + promptComponents.signature
         const consolePreview = await emailSender(to, cc, subject, message, messageId)
         console.log(consolePreview)
         await imapEnd(imap)      
@@ -126,10 +125,12 @@ async function countdown(emailHeaders, promptComponents) {
         eventEmitter.emit('input')
     }, timerLength)
     
+    
     // Save timeoutId so this timeout can be cancelled if mail is received for it
     monitor(imap, mailbox, 'INBOX', to, timeoutId)
     chaseSequences[emailHeaders[0]] = timeoutId
     chaseSequences[emailHeaders[0]].nextEmail = sendAt
+    console.log(`\n\nMonitoring for ${to}. Preview:\n${message}\n`)
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {       

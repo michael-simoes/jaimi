@@ -8,7 +8,7 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 async function completion(prompt) {  
-  return 'This is just a test conducted without accessing the API.'
+  // return 'This is just a test conducted without accessing the API.'
   try {
     const completion = await openai.createCompletion({
       model: "text-davinci-003",
@@ -20,7 +20,6 @@ async function completion(prompt) {
     return completion.data.choices[0].text   
   } catch(error) { console.log(error) }
 }
-
 
 async function generatePrompt(firstSent, replyingToBody) {
     if (!replyingToBody) {

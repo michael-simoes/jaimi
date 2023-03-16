@@ -1,18 +1,5 @@
 const { convert } = require('html-to-text');
 
-
-function getSentTime() {
-    /// get sent time of email, send additional email after 72 hours if no reply received
-    //IF jaimi sends the email, then we don't have to look for it in the inbox. This is much easier.
-}
-
-function checkForReply() {
-    ///if an email from {SENDER} has not been received after specified {TIME}, initiate follow up sequence
-    //read newest email, add to "db"
-    ///on 72 hours after email sent, trigger follow-up sequence
-}
-
-
 function convertHtml(body) {                 
     return new Promise((resolve, reject) => {      
         const plainBody = convert(body, {
@@ -53,13 +40,13 @@ function cleanString(body) {
     .replace(/^(\n)/, '')
     .replaceAll(/\b=20\b/g, '\n')
     .replaceAll(/\b[?]=20\b/g, '?\n')
-    .replaceAll(/\b[.!]=20\b/g, '.\n')
+    .replaceAll(/\b[.!,]=20\b/g, '.\n')
     // .replace(/^(\n\n)/, '')
     return body
 }
 
-//Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
-//There are several cases added to account for when Content-Transfer has additional characters attached
+// Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
+// There are several cases added to account for when Content-Transfer has additional characters attached
 function removeExtraData(body) {
     if (body.indexOf('charset=') == -1) {
         return body
@@ -69,7 +56,7 @@ function removeExtraData(body) {
 }
 
 function removeReplyThread(body) {
-    //Remove reply threads that are indented
+    // Remove reply threads that are indented
     let cleanBody = body
     splitArray = cleanBody.indexOf('> On ')
     if (splitArray != -1) {
@@ -79,7 +66,7 @@ function removeReplyThread(body) {
     // Replace the '<email@email.com>' that precedes reply threads if there is one
     cleanBody = cleanBody.replace(/<(.*)> wrote:/g, '<RMVBEYOND>')    
 
-     //Remove reply threads that are not indented but have a "from, sent, to" header attached 
+     // Remove reply threads that are not indented but have a "from, sent, to" header attached 
     let splitText = cleanBody.split('\n')
     for (let i = 0; i < splitText.length -3; i++) {
         if (splitText[i].indexOf('From: ') == 0 &&
@@ -98,7 +85,7 @@ function removeReplyThread(body) {
     return cleanBody
 }
 
-///This doesn't work if the forward message has no content. This also doesn't work for Outlook
+/// This doesn't work if the forward message has no content. This also doesn't work for Outlook
 function removeForwardThread(body) {
     splitText = body.split('\n')
     splitArray = splitText.indexOf('---------- Forwarded message ---------')
@@ -110,18 +97,18 @@ function removeForwardThread(body) {
 }
 
 function removeDisclaimer(body) {
-    //check a parsed email to see if it has a legal disclaimer at the bottom, if so, remove it
-    //can check for common language found in those disclaimers and then just remove it 
-        //and if it seems sketchy, we can attach a message that says "Legal Disclaimer taken out" 
+    // check a parsed email to see if it has a legal disclaimer at the bottom, if so, remove it
+    // can check for common language found in those disclaimers and then just remove it 
+        // and if it seems sketchy, we can attach a message that says "Legal Disclaimer taken out" 
 }
 
 function checkForMarketing(body) {
-    //check a parsed email to see if it's probably just a marketing email based on having a bunch of random shit in it
-    //can check for a bunch of weird characters
-    //doesn't have to be perfect, just get a good "guess" so that OpenAI isn't wasting money
+    // check a parsed email to see if it's probably just a marketing email based on having a bunch of random shit in it
+    // can check for a bunch of weird characters
+    // doesn't have to be perfect, just get a good "guess" so that OpenAI isn't wasting money
 }
 
-//Detec type of header element, then select correct function to parse the content
+// Detect type of header element, then select correct function to parse the content
 async function parseHeader(header) {
     let splitHead = header.replaceAll('\t', '')
     splitHead = splitHead.split('\r\n')
