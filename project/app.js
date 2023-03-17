@@ -22,7 +22,7 @@ const readline = require('readline').createInterface({
   });
 
 const instructions = `\nCommands:
-\tchase: start followup sequence for most recently sent email
+\tchase: start follow up sequence for most recently sent email
 \tactive: view active sessions and date/time of next email
 \t{email@example.com}: cancel followups for that email\n`
 
@@ -90,7 +90,7 @@ async function main() {
     if (repliedToElements.error) {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
         if (repliedToElements.error) {
-            console.log('Please try again.', repliedToElements.error)
+            console.log(`\n${repliedToElements.error}\n`)
             return { target: false, preview: false }
         }
     }
@@ -134,6 +134,7 @@ async function countdown(emailHeaders, promptComponents) {
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {       
+    console.log('monitoring')
     const error = await new Promise(resolve => { 
         imap.on('error', async (err) => {
             if (err.code == 'ECONNRESET') { 
@@ -154,7 +155,10 @@ async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {
             imap.on('mail', async (num) => {                  
                 result = await connection(readLastReceived, true)
                 header = await parseHeader(result.header)
-                if (header[5] == targetEmail) {
+                const emailFrom = header[5].toLowerCase()                
+                targetEmail = targetEmail.toLowerCase()
+                console.log(targetEmail, emailFrom)
+                if (emailFrom == targetEmail) {
                     clearTimeout(timeoutId)
                     console.log(`\nChase terminated for: ${targetEmail}\n`)
                     delete chaseSequences[targetEmail]

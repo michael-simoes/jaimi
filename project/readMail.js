@@ -104,8 +104,8 @@ async function readEmail(imap, emailClient, folder, emailId) {
 
 async function imapInit() {
     let imap = new Imap({
-        user: process.env.USER,
-        password: process.env.PASS,              
+        user: process.env.JAIMI_USER,
+        password: process.env.JAIMI_PASS,              
         host: process.env.IMAP_DOMAIN,
         port: 993,
         tls: true,

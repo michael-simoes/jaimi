@@ -8,8 +8,8 @@ const smtpConfig = {
       ciphers: 'SSLv3'
   },
     auth: {
-        user: process.env.USER,
-        pass: process.env.PASS
+        user: process.env.JAIMI_USER,
+        pass: process.env.JAIMI_PASS
     }
   };
   
@@ -18,9 +18,9 @@ const smtpConfig = {
 async function emailSender(to, cc, subject, text, messageId) {
   // return                              
   transporter.sendMail({                                         
-    from: process.env.USER,
+    from: process.env.JAIMI_USER,
     to: to,
-    cc: [ process.env.USER, cc ],       // support for 1 cc'd person + yourself so you see the emails coming in
+    cc: cc,       // support for 1 cc'd person + yourself so you see the emails coming in
     subject: subject,
     text: text,
     inReplyTo: messageId,
