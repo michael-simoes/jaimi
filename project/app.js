@@ -70,7 +70,7 @@ async function main() {
     const emailElements = await connection(readLastSent, true)
     bar1.update(88)      
     if (emailElements.error) {        
-        console.log('Please try again.', emailElements.error)    
+        console.log('\n', emailElements.error)    
         return { target: false, preview: false }
     }
     const firstSent = await parseBody(emailElements.body)
@@ -90,7 +90,7 @@ async function main() {
     if (repliedToElements.error) {
         repliedToElements = await connection(readEmail, false, 'SENT', sentEmailHeader[4])
         if (repliedToElements.error) {
-            console.log(`\n${repliedToElements.error}\n`)
+            console.log(`\n${repliedToElements.error}`)
             return { target: false, preview: false }
         }
     }
@@ -121,21 +121,20 @@ async function countdown(emailHeaders, promptComponents) {
         const consolePreview = await emailSender(to, cc, subject, message, messageId)
         console.log(consolePreview)
         await imapEnd(imap)      
-        countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
+        await countdown(emailHeaders, promptComponents)      /// Runs recursively until response (cancellation)
         eventEmitter.emit('input')
     }, timerLength)
     
     
     // Save timeoutId so this timeout can be cancelled if mail is received for it
-    monitor(imap, mailbox, 'INBOX', to, timeoutId)
+    monitor(imap, mailbox, 'INBOX', to, timeoutId)        // locks everyting up? 
     chaseSequences[emailHeaders[0]] = timeoutId
     chaseSequences[emailHeaders[0]].nextEmail = sendAt
     console.log(`\n\nMonitoring for ${to}. Preview:\n${message}\n`)
 }
 
 async function monitor(imap, emailClient, folder, targetEmail, timeoutId) {       
-    console.log('monitoring')
-    const error = await new Promise(resolve => { 
+    new Promise(resolve => { 
         imap.on('error', async (err) => {
             if (err.code == 'ECONNRESET') { 
                 return 
