@@ -111,6 +111,7 @@ async function imapInit() {
         tls: true,
         tlsOptions: { rejectUnauthorized: false }
     })
+
     imap.connect()  
     return imap
 }

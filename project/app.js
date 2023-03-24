@@ -110,10 +110,6 @@ async function countdown(emailHeaders, promptComponents) {
     let imap = await imapInit()                            
     let to = emailHeaders[0], cc = emailHeaders[1], subject = emailHeaders[2], messageId = emailHeaders[3];
     let firstSent = promptComponents.firstSent, respondingTo = promptComponents.respondingTo;
-    const prompt = await generatePrompt(firstSent, respondingTo)
-    const aiFollowUp = await completion(prompt)
-    const message = aiFollowUp + promptComponents.signature
-    
     const timeoutId = setTimeout(async () => {
         if (timerLength <= 1000) {
             new Error('\nThe email timer length is less than 1 second. Something has gone wrong.\n')
@@ -125,9 +121,11 @@ async function countdown(emailHeaders, promptComponents) {
         eventEmitter.emit('input')
     }, timerLength)
     
-    
-    // Save timeoutId so this timeout can be cancelled if mail is received for it
-    monitor(imap, mailbox, 'INBOX', to, timeoutId)        // locks everyting up? 
+    await monitor(imap, mailbox, 'INBOX', to, timeoutId)    
+    const prompt = await generatePrompt(firstSent, respondingTo)
+    const aiFollowUp = await completion(prompt)
+    const message = aiFollowUp + promptComponents.signature
+   
     chaseSequences[emailHeaders[0]] = timeoutId
     chaseSequences[emailHeaders[0]].nextEmail = sendAt
     console.log(`\n\nMonitoring for ${to}. Preview:\n${message}\n`)
