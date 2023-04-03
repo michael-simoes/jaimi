@@ -174,13 +174,28 @@ async function decode64(body) {
 }
 
 async function removeAttachments(body) {
-    // cut everything after content-disposition because we don't need it
+    // cut everything after content-type because it will just be encoded attachments
     const contentDisposition = ['Content-Type: image', 'Content-Type: application']
     for (let i = 0; i < 2; i++) {
         let attachmentIndex = body.indexOf(contentDisposition[i])
         if (attachmentIndex != -1) {
             body = body.slice(0, attachmentIndex)
         }
+    }
+    return body
+}
+
+async function removeSpaces(body) {
+    String.prototype.lastChar = function() {
+        return this.charAt(this.length - 1);
+    }
+    while (body[0] == ' ' || body[0] == '\n') {
+        console.log('active')
+        body = body.substring(1)
+    }
+    const validLastChars =  /[A-Za-z0-9_.,?\!"'/$]/ 
+    while (!validLastChars.test(body.lastChar())) {
+        body = body.slice(0, -1)
     }
     return body
 }
@@ -197,7 +212,8 @@ async function parseBody(body) {
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
-    cleanBody = await removeForwardThread(cleanBody)    
+    cleanBody = await removeForwardThread(cleanBody)
+    cleanBody = await removeSpaces(cleanBody)    
     console.log('EMAIL BODY:', cleanBody)
     return cleanBody
 }
