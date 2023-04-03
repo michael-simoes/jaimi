@@ -165,11 +165,14 @@ async function parseHeader(header) {
 }
 
 async function decode64(body) {
-    let base64 = body.slice(0, 100).indexOf(' ')         // this is pretty much useless? emails start with some content-types
-    if (base64 == -1) {
-        let buffer = Buffer.from(body, 'base64')
-        return buffer.toString('utf8')
-    }
+    const contentTranferFormats = ['Content-Transfer-Encoding: base64', 'Content-Transfer-Encoding:\nbase64']
+    for (let i = 0; i < 2; i++) {
+        if (body.indexOf(contentTranferFormats[i]) != -1) {
+            body = body.slice(body.indexOf(contentTranferFormats[i]) + contentTranferFormats[i].length)
+            let buffer = Buffer.from(body, 'base64')
+            return buffer.toString('utf8')
+        }
+    }    
     return body
 }
 
@@ -181,7 +184,7 @@ async function removeAttachments(body) {
         if (attachmentIndex != -1) {
             body = body.slice(0, attachmentIndex)
         }
-    }
+    }    
     return body
 }
 
@@ -190,7 +193,6 @@ async function removeSpaces(body) {
         return this.charAt(this.length - 1);
     }
     while (body[0] == ' ' || body[0] == '\n') {
-        console.log('active')
         body = body.substring(1)
     }
     const validLastChars =  /[A-Za-z0-9_.,?\!"'/$]/ 
@@ -206,15 +208,11 @@ async function parseBody(body) {
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
     cleanBody = await convertHtml(cleanBody) // This has to run before if statement or too many false positives
-    if (cleanBody.length > 2500) {           // Fail-safe. If we missed an attachment this should catch the base64
-        return false
-    }
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)
     cleanBody = await removeSpaces(cleanBody)    
-    console.log('EMAIL BODY:', cleanBody)
     return cleanBody
 }
 
