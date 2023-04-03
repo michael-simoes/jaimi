@@ -64,7 +64,6 @@ eventEmitter.on('input', async () => {
     })
 })
 eventEmitter.emit('input');
-main()
 
 async function main() {
     bar1.update(28)   
@@ -81,6 +80,8 @@ async function main() {
     }
     promptComponents.firstSent += firstSent
     const sentEmailHeader = await parseHeader(emailElements.header)
+    
+    // Check if there is a valid In-Reply-To message ID
     if (!sentEmailHeader[4]) {
         bar1.update(99)
         bar1.stop()

@@ -1,16 +1,19 @@
 const { convert } = require('html-to-text');
 
-function convertHtml(body) {                 
+function convertHtml(body) { 
+    if (body.match('</p>') < 3) {
+        return body
+    }       
     return new Promise((resolve, reject) => {      
         const plainBody = convert(body, {
-        wordwrap: null,
-        baseElements: { 
-            selectors: [ 'body' ],
-            selector: 'a', options: { hideLinkHrefIfSameAsText: true } } 
-        }) 
-        resolve(plainBody)
-        reject('Error: converting HTML contents of email to plaintext has failed.')
-    }).then((plainBody) => {
+            wordwrap: null,
+            baseElements: { 
+                selectors: [ 'body' ],
+                selector: 'a', options: { hideLinkHrefIfSameAsText: true } } 
+            }) 
+            resolve(plainBody)
+            reject('Error: converting HTML contents of email to plaintext has failed.')
+        }).then((plainBody) => {
         return plainBody 
     })  
 }
@@ -173,6 +176,7 @@ async function decode64(body) {
             return buffer.toString('utf8')
         }
     }    
+    
     return body
 }
 
@@ -207,7 +211,7 @@ async function parseBody(body) {
     cleanBody = await decode64(body)
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
-    cleanBody = await convertHtml(cleanBody) // This has to run before if statement or too many false positives
+    cleanBody = await convertHtml(cleanBody)
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
