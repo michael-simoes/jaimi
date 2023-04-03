@@ -64,6 +64,7 @@ eventEmitter.on('input', async () => {
     })
 })
 eventEmitter.emit('input');
+main()
 
 async function main() {
     bar1.update(28)   

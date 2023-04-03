@@ -48,10 +48,12 @@ function cleanString(body) {
 // Remove the extra data appended to the top of the email (typically following conten-transfer-encoding)
 // There are several cases added to account for when Content-Transfer has additional characters attached
 function removeExtraData(body) {
-    if (body.indexOf('charset=') == -1) {
-        return body
+    for (let i = 0; i < 2; i++) {
+        if (body.indexOf('charset=') == -1) {
+            return body
+        }
+        body = body.slice(body.indexOf('charset=') + 8)
     }
-    body = body.slice(body.indexOf('charset=', 20) + 9)
     return body
 }
 
@@ -163,7 +165,7 @@ async function parseHeader(header) {
 }
 
 async function decode64(body) {
-    let base64 = body.slice(0, 100).indexOf(' ')
+    let base64 = body.slice(0, 100).indexOf(' ')         // this is pretty much useless? emails start with some content-types
     if (base64 == -1) {
         let buffer = Buffer.from(body, 'base64')
         return buffer.toString('utf8')
@@ -171,20 +173,32 @@ async function decode64(body) {
     return body
 }
 
+async function removeAttachments(body) {
+    // cut everything after content-disposition because we don't need it
+    const contentDisposition = ['Content-Type: image', 'Content-Type: application']
+    for (let i = 0; i < 2; i++) {
+        let attachmentIndex = body.indexOf(contentDisposition[i])
+        if (attachmentIndex != -1) {
+            body = body.slice(0, attachmentIndex)
+        }
+    }
+    return body
+}
+
 async function parseBody(body) {
+    body = await removeAttachments(body)
     cleanBody = await decode64(body)
     // If the email has content-disposition attribute or it's super long, throw an error
     // It's likely that the email contains an attachment or image which we cannot process yet
     cleanBody = await convertHtml(cleanBody) // This has to run before if statement or too many false positives
-    if (cleanBody.indexOf('Content-Disposition:') != -1 || 
-    cleanBody.indexOf('Content-Type: multipart/alternative') != -1 || 
-    cleanBody.length > 2500) {                 /// We cannot have this throw an error! Would be so bad
+    if (cleanBody.length > 2500) {           // Fail-safe. If we missed an attachment this should catch the base64
         return false
     }
     cleanBody = await cleanString(cleanBody)
     cleanBody = await removeExtraData(cleanBody)
     cleanBody = await removeReplyThread(cleanBody)
     cleanBody = await removeForwardThread(cleanBody)    
+    console.log('EMAIL BODY:', cleanBody)
     return cleanBody
 }
 

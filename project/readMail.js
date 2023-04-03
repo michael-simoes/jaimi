@@ -96,7 +96,6 @@ async function readEmail(imap, emailClient, folder, emailId) {
                     resolve(body, header)
                 })    
             }) 
-            
         })})
     })
     return { body, header, error }
